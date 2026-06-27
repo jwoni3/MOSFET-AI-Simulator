@@ -85,14 +85,17 @@ with col1:
     
     fig_struct = go.Figure()
     
+    # [수정] PMOS 채널 색상을 보라색으로 분리 및 테두리 색상 설정
     if mos_type == "NMOS":
         sub_color, sd_color, ch_color = "#e0f2fe", "#4ade80", "#fc8181" 
         sub_text, sd_label = "p-Substrate", "n+"
         pinch_color = "#b91c1c"
     else:
-        sub_color, sd_color, ch_color = "#ffe4e6", "#60a5fa", "#3b82f6" 
+        sub_color, sd_color, ch_color = "#ffe4e6", "#60a5fa", "#a855f7" # S/D는 파랑, 채널은 보라색으로 뚜렷하게 분리
         sub_text, sd_label = "n-Substrate", "p+"
         pinch_color = "#1d4ed8"
+
+    ch_border_color = "#1e293b" # 채널을 강조할 진한 테두리 색상 (공통)
 
     # 기판, 산화막, 게이트
     fig_struct.add_shape(type="rect", x0=0, y0=0, x1=10, y1=4, fillcolor=sub_color, line=dict(width=0))
@@ -103,14 +106,16 @@ with col1:
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
     
-    # 채널 & 핀치오프
+    # [수정] 채널 & 핀치오프 (line 속성에 color와 width를 주어 테두리 강조)
     if op_region != "차단 영역 (Cutoff)":
         if op_region == "선형 영역 (Linear)":
             t_d = 4.0 - 0.2 * (1 - abs_vds / max(v_ov, 0.001))
-            fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", fillcolor=ch_color, line=dict(width=0), opacity=0.8)
+            fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", 
+                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=1.5), opacity=0.85)
         else:
             p_p = max(4.0, 7 - (abs_vds - v_ov) * 0.8)
-            fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", fillcolor=ch_color, line=dict(width=0), opacity=0.8)
+            fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", 
+                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=1.5), opacity=0.85)
             fig_struct.add_shape(type="line", x0=p_p, y0=0, x1=p_p, y1=5.5, line=dict(color=pinch_color, width=2, dash="dash"))
             fig_struct.add_annotation(x=p_p, y=5.7, text="Pinch-off", font=dict(color=pinch_color, size=10), showarrow=False)
 
@@ -135,7 +140,6 @@ with col2:
 
     fig_iv = go.Figure()
     
-    # [수정] 그래프 이름(name)을 한글로 명확히 지정하여 범례에 표시
     fig_iv.add_trace(go.Scatter(x=v_b, y=i_b, mode='lines', line=dict(color='#cbd5e1', dash='dash', width=1.5), name="포화 영역 경계선"))
     
     i_ax = [0 if abs_vgs < abs_vth else (k_n*(v_ov*v - 0.5*v**2) if v < v_ov else 0.5*k_n*v_ov**2*(1+0.02*(v-v_ov))) for v in v_ax]
@@ -143,7 +147,6 @@ with col2:
     
     fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="현재 동작점"))
     
-    # [수정] showlegend=True로 변경하고 범례 위치를 그래프 안쪽(상단 좌측)에 반투명하게 배치
     fig_iv.update_layout(
         height=350, 
         margin=dict(l=0, r=0, t=10, b=0), 
