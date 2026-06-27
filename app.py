@@ -44,8 +44,6 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### **💬 AI에게 질문하기**")
     user_query = st.text_area("질문 입력:", "현재 전압 상태를 물리적으로 설명해줘.", height=70)
-    
-    # [수정] 깨지는 로봇 이모지 제거
     ask_ai_btn = st.button("AI 실시간 해설 받기", use_container_width=True)
 
 # ---------------------------------------------------------
@@ -92,7 +90,7 @@ with col1:
         sub_text, sd_label = "p-Substrate", "n+"
         pinch_color = "#b91c1c"
     else:
-        sub_color, sd_color, ch_color = "#fef3c7", "#f472b6", "#3b82f6" 
+        sub_color, sd_color, ch_color = "#ffe4e6", "#60a5fa", "#3b82f6" 
         sub_text, sd_label = "n-Substrate", "p+"
         pinch_color = "#1d4ed8"
 
@@ -136,20 +134,31 @@ with col2:
     i_b = 0.5 * k_n * (v_b**2)
 
     fig_iv = go.Figure()
-    fig_iv.add_trace(go.Scatter(x=v_b, y=i_b, mode='lines', line=dict(color='#cbd5e1', dash='dash', width=1.5), name="Boundary"))
+    
+    # [수정] 그래프 이름(name)을 한글로 명확히 지정하여 범례에 표시
+    fig_iv.add_trace(go.Scatter(x=v_b, y=i_b, mode='lines', line=dict(color='#cbd5e1', dash='dash', width=1.5), name="포화 영역 경계선"))
     
     i_ax = [0 if abs_vgs < abs_vth else (k_n*(v_ov*v - 0.5*v**2) if v < v_ov else 0.5*k_n*v_ov**2*(1+0.02*(v-v_ov))) for v in v_ax]
-    fig_iv.add_trace(go.Scatter(x=v_ax, y=i_ax, mode='lines', line=dict(color='#3b82f6', width=3), name="I-V Curve"))
-    fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="Point"))
+    fig_iv.add_trace(go.Scatter(x=v_ax, y=i_ax, mode='lines', line=dict(color='#3b82f6', width=3), name="I-V 특성 곡선"))
     
-    fig_iv.update_layout(height=350, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="V_DS (V)", yaxis_title="I_D (mA)", showlegend=False, plot_bgcolor='white')
+    fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="현재 동작점"))
+    
+    # [수정] showlegend=True로 변경하고 범례 위치를 그래프 안쪽(상단 좌측)에 반투명하게 배치
+    fig_iv.update_layout(
+        height=350, 
+        margin=dict(l=0, r=0, t=10, b=0), 
+        xaxis_title="V_DS (V)", 
+        yaxis_title="I_D (mA)", 
+        showlegend=True, 
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255, 255, 255, 0.8)", bordercolor="#e2e8f0", borderwidth=1),
+        plot_bgcolor='white'
+    )
     fig_iv.update_xaxes(showgrid=True, gridcolor='#f1f5f9')
     fig_iv.update_yaxes(showgrid=True, gridcolor='#f1f5f9')
     st.plotly_chart(fig_iv, use_container_width=True)
 
 # --- [Column 3] AI 실시간 해설 ---
 with col3:
-    # [수정] 깨지는 로봇 이모지 제거
     st.markdown("<div class='header-text'>AI 실시간 바이브 해설</div>", unsafe_allow_html=True)
     
     if ask_ai_btn:
@@ -161,7 +170,6 @@ with col3:
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
-                    # [수정] 프롬프트 고도화: 서론 생략 및 심도 있는 물성 해설 요구
                     prompt = f"""
                     너는 학부 및 대학원 수준의 반도체 공학 전문가야. 아래 정보를 바탕으로 현재 MOSFET의 상태를 물리적으로 깊이 있게 분석해줘.
                     
@@ -175,13 +183,12 @@ with col3:
                     {user_query}
                     
                     [답변 지침]
-                    1. "안녕하세요", "설명해 드리겠습니다" 등 인사말, 서론, 맺음말은 일절 생략하고 즉시 핵심 물리 해설로 진입할 것.
+                    1. "안녕하세요", "설명해 드리겠습니다", "도착했습니다" 등 인사말, 서론, 맺음말은 일절 생략하고 즉시 핵심 물리 해설로 진입할 것.
                     2. 표면적인 설명(예: 전압이 커서 전류가 흐른다)을 넘어, 페르미 준위(Fermi level), 에너지 밴드 벤딩(Energy band bending), 반전층(Inversion layer) 내 캐리어 농도, 공핍층(Depletion region) 역학, 전계(Electric field) 등 심도 있는 물성 지식을 포함할 것.
                     3. 마크다운 불릿을 활용하여 가독성 높게 구조화할 것.
                     """
                     
                     response = model.generate_content(prompt)
-                    st.success("해설이 도착했습니다! 🎉")
                     st.markdown(response.text)
                 except Exception as e:
                     st.error(f"⚠️ AI 응답 생성 중 오류가 발생했습니다.\n\n상세 정보: {e}")
