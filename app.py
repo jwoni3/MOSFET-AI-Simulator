@@ -6,7 +6,7 @@ import google.generativeai as genai
 # 1. 페이지 설정
 st.set_page_config(page_title="MOSFET AI 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
-# UI 최적화 CSS (AI 패널을 독립된 창처럼 보이게 하는 디자인 포함)
+# UI 최적화 CSS (AI 창 크기 조절 기능 추가)
 st.markdown("""
     <style>
         .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
@@ -21,16 +21,20 @@ st.markdown("""
         .stTextArea { padding-bottom: 0px !important; margin-bottom: -5px !important; }
         hr { margin-top: 10px !important; margin-bottom: 10px !important; }
 
-        /* [추가] 우측 AI 패널을 독립된 창처럼 꾸미는 CSS */
+        /* [수정] 우측 AI 컨테이너를 독립된 창처럼 만들고 '크기 조절(resize)' 기능 활성화 */
         [data-testid="stVerticalBlockBorderWrapper"] {
             background-color: #f1f5f9;
             border-radius: 12px;
             border: 1px solid #cbd5e1;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             padding: 10px;
+            resize: both; /* 마우스 드래그로 가로/세로 크기 조절 허용 */
+            overflow: auto; /* 내용이 넘치면 스크롤 생성 */
+            min-height: 300px;
+            min-width: 250px;
         }
         
-        /* 다크모드 시 AI 패널 색상 자동 반전 */
+        /* 다크모드 시 AI 창 색상 자동 반전 */
         @media (prefers-color-scheme: dark) {
             [data-testid="stVerticalBlockBorderWrapper"] {
                 background-color: #1e293b;
@@ -179,11 +183,11 @@ with col2:
     fig_iv.update_yaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
     st.plotly_chart(fig_iv, use_container_width=True, theme="streamlit")
 
-# --- [Column 3] AI 실시간 해설 (독립된 패널 컨테이너 적용) ---
+# --- [Column 3] AI 실시간 해설 (크기 조절 가능) ---
 with col3:
-    # [수정] 테두리(border)가 있는 컨테이너를 사용하여 사이드바처럼 시각적으로 분리
     with st.container(border=True):
-        st.markdown("<div class='header-text' style='text-align: center; color: #3b82f6;'>🤖 AI 실시간 해설 패널</div>", unsafe_allow_html=True)
+        # [수정] 요청하신 대로 "패널"이라는 단어를 제거했습니다.
+        st.markdown("<div class='header-text' style='text-align: center; color: #3b82f6;'>🤖 AI 실시간 해설</div>", unsafe_allow_html=True)
         st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
         
         if ask_ai_btn:
