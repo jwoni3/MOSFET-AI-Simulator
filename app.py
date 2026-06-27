@@ -44,7 +44,9 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### **💬 AI에게 질문하기**")
     user_query = st.text_area("질문 입력:", "현재 전압 상태를 물리적으로 설명해줘.", height=70)
-    ask_ai_btn = st.button("🤖 AI 실시간 해설 받기", use_container_width=True)
+    
+    # [수정] 깨지는 로봇 이모지 제거
+    ask_ai_btn = st.button("AI 실시간 해설 받기", use_container_width=True)
 
 # ---------------------------------------------------------
 # 3. 물리 계산 로직
@@ -147,27 +149,35 @@ with col2:
 
 # --- [Column 3] AI 실시간 해설 ---
 with col3:
-    st.markdown("<div class='header-text'>🤖 AI 실시간 바이브 해설</div>", unsafe_allow_html=True)
+    # [수정] 깨지는 로봇 이모지 제거
+    st.markdown("<div class='header-text'>AI 실시간 바이브 해설</div>", unsafe_allow_html=True)
     
     if ask_ai_btn:
         if not api_key:
             st.error("⚠️ 사이드바에 API Key를 입력해주세요.")
         else:
-            with st.spinner("AI 교수님이 분석 중입니다..."):
+            with st.spinner("반도체 물성 분석 중..."):
                 try:
-                    # [수정] 빠르고 한도가 넉넉한 gemini-2.5-flash 모델로 변경
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
+                    # [수정] 프롬프트 고도화: 서론 생략 및 심도 있는 물성 해설 요구
                     prompt = f"""
-                    너는 반도체 공학 전문가 교수님이야. 아래 정보를 바탕으로 현재 MOSFET의 물리적 상태와 작동 원리를 친절하게 설명해줘.
-                    - 소자 타입: {mos_type}
-                    - 입력 전압: V_GS={v_gs}V, V_DS={v_ds}V, V_TH={v_th}V
-                    - 현재 상태: {op_region}
-                    - 계산된 전류: {i_d:.2f}mA
-                    - 사용자 질문: {user_query}
+                    너는 학부 및 대학원 수준의 반도체 공학 전문가야. 아래 정보를 바탕으로 현재 MOSFET의 상태를 물리적으로 깊이 있게 분석해줘.
                     
-                    * 마크다운 불릿 포인트를 사용하여 가독성 있게 설명해줘.
+                    [상태 정보]
+                    - 소자: {mos_type}
+                    - V_GS={v_gs}V, V_DS={v_ds}V, V_TH={v_th}V
+                    - 동작 영역: {op_region}
+                    - I_D={i_d:.2f}mA
+                    
+                    [사용자 질문]
+                    {user_query}
+                    
+                    [답변 지침]
+                    1. "안녕하세요", "설명해 드리겠습니다" 등 인사말, 서론, 맺음말은 일절 생략하고 즉시 핵심 물리 해설로 진입할 것.
+                    2. 표면적인 설명(예: 전압이 커서 전류가 흐른다)을 넘어, 페르미 준위(Fermi level), 에너지 밴드 벤딩(Energy band bending), 반전층(Inversion layer) 내 캐리어 농도, 공핍층(Depletion region) 역학, 전계(Electric field) 등 심도 있는 물성 지식을 포함할 것.
+                    3. 마크다운 불릿을 활용하여 가독성 높게 구조화할 것.
                     """
                     
                     response = model.generate_content(prompt)
@@ -176,4 +186,4 @@ with col3:
                 except Exception as e:
                     st.error(f"⚠️ AI 응답 생성 중 오류가 발생했습니다.\n\n상세 정보: {e}")
     else:
-        st.info("👈 왼쪽 패널에서 설정을 마치고 [🤖 AI 실시간 해설 받기]를 눌러보세요.")
+        st.info("👈 왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 받기] 버튼을 눌러보세요.")
