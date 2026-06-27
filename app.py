@@ -15,12 +15,12 @@ col_left, col_center, col_right = st.columns([1.2, 2.0, 1.2], gap="large")
 with col_left:
     st.subheader("🎛️ 제어 및 입력 패널")
     
-    # API 키 입력 (보안을 위해 password 타입으로 처리)
-    # 수정된 코드 (금고에서 키를 자동으로 가져옴)
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-else:
-    api_key = st.text_input("Google Gemini API Key", type="password", help="API 키를 찾을 수 없습니다. 직접 입력하세요.")
+    # API 키 자동 로드 설정 (Streamlit Secrets 활용)
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        st.success("보안 금고(Secrets)에서 API 키를 성공적으로 불러왔습니다.")
+    else:
+        api_key = st.text_input("Google Gemini API Key", type="password", help="API 키를 찾을 수 없습니다. 직접 입력하세요.")
     
     mos_type = st.selectbox("소자 타입 선택", ["NMOS", "PMOS"])
     
@@ -157,7 +157,7 @@ with col_right:
     
     if ask_ai_btn:
         if not api_key:
-            st.error("좌측 패널에 Gemini API Key를 입력해주세요.")
+            st.error("좌측 패널에 Gemini API Key를 입력하거나 Secrets에 설정해주세요.")
         else:
             with st.spinner("AI가 물리 현상을 분석 중입니다..."):
                 try:
