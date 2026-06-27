@@ -9,7 +9,7 @@ st.set_page_config(page_title="MOSFET AI 시뮬레이터", layout="wide", initia
 # UI 최적화 CSS
 st.markdown("""
     <style>
-        [data-testid="stSidebar"] { background-color: #f1f5f9; border-right: 1px solid #e2e8f0; }
+        [data-testid="stSidebar"] { background-color: #f8fafc; border-right: 1px solid #e2e8f0; }
         .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
         .header-text { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px; margin-top: 5px; }
     </style>
@@ -24,7 +24,6 @@ st.markdown("<h2 style='text-align: center; color: #1e293b; margin-bottom: 20px;
 with st.sidebar:
     st.markdown("### **🎛️ 제어 및 입력 패널**")
     
-    # API 키 로드 (금고에서 가져오거나 직접 입력)
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
     else:
@@ -33,7 +32,6 @@ with st.sidebar:
     st.markdown("---")
     mos_type = st.selectbox("소자 타입 선택", ["NMOS", "PMOS"])
     
-    # 전압 슬라이더 설정
     if mos_type == "NMOS":
         v_th = st.slider("문턱 전압 (V_TH) [V]", 0.5, 2.0, 1.0, 0.1)
         v_gs = st.slider("게이트 전압 (V_GS) [V]", 0.0, 5.0, 3.0, 0.1)
@@ -71,10 +69,14 @@ col1, col2, col3 = st.columns([1, 1.2, 1.2], gap="medium")
 with col1:
     st.markdown("<div class='header-text'>📊 실시간 소자 상태</div>", unsafe_allow_html=True)
     
-    # 동작 영역 박스 디자인
+    # [수정] 동작 영역 박스 내부에 "현재 동작 영역" 라벨을 작게 추가
     box_color = "#e6f7ff" if "포화" in op_region else "#f6ffed" if "선형" in op_region else "#fff1f0"
-    st.markdown(f"""<div style='background-color:{box_color}; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;'>
-        <span style='font-size:18px; font-weight:700;'>{op_region}</span></div>""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='background-color:{box_color}; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;'>
+        <div style='font-size:12px; color:#64748b; margin-bottom:2px;'>현재 동작 영역</div>
+        <span style='font-size:18px; font-weight:700;'>{op_region}</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     m1, m2 = st.columns(2)
     m1.metric("인가 전압 (|V_DS|)", f"{abs_vds:.2f} V")
@@ -82,45 +84,46 @@ with col1:
     
     st.markdown("<div class='header-text'>🧱 MOSFET 구조 시각화</div>", unsafe_allow_html=True)
     
-    # MOSFET 구조 디자인 (PMOS 색상 대응)
     fig_struct = go.Figure()
     
-    # NMOS/PMOS 색상 변수 설정
     if mos_type == "NMOS":
-        sub_color, sd_color, ch_color = "#e0f2fe", "#4ade80", "#ef4444" # 연파랑 기판, 초록 S/D, 빨간 채널
-        sub_text = "p-Substrate"
-        sd_label = "n+"
+        sub_color, sd_color, ch_color = "#e0f2fe", "#4ade80", "#fc8181" 
+        sub_text, sd_label = "p-Substrate", "n+"
+        pinch_color = "#b91c1c"
     else:
-        sub_color, sd_color, ch_color = "#ffedd5", "#a78bfa", "#3b82f6" # 연주황 기판, 보라 S/D, 파란 채널
-        sub_text = "n-Substrate"
-        sd_label = "p+"
+        sub_color, sd_color, ch_color = "#fef3c7", "#f472b6", "#3b82f6" 
+        sub_text, sd_label = "n-Substrate", "p+"
+        pinch_color = "#1d4ed8"
 
-    # (1) 기판
+    # 기판
     fig_struct.add_shape(type="rect", x0=0, y0=0, x1=10, y1=4, fillcolor=sub_color, line=dict(width=0))
-    # (2) 산화막 & 게이트
+    # 산화막 & 게이트
     fig_struct.add_shape(type="rect", x0=3, y0=4, x1=7, y1=4.15, fillcolor="#cbd5e1", line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=3, y0=4.15, x1=7, y1=5.0, fillcolor="#1e293b", line=dict(width=0))
-    # (3) 소스 & 드레인
+    # 소스 & 드레인
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
     
-    # (4) 채널 & 핀치오프
+    # 채널 & 핀치오프
     if op_region != "차단 영역 (Cutoff)":
         if op_region == "선형 영역 (Linear)":
             t_d = 4.0 - 0.2 * (1 - abs_vds / max(v_ov, 0.001))
             fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", fillcolor=ch_color, line=dict(width=0), opacity=0.8)
-        else: # Saturation
+        else:
             p_p = max(4.0, 7 - (abs_vds - v_ov) * 0.8)
             fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", fillcolor=ch_color, line=dict(width=0), opacity=0.8)
-            # Pinch-off 점선
-            fig_struct.add_shape(type="line", x0=p_p, y0=0, x1=p_p, y1=5.5, line=dict(color="#ef4444", width=2, dash="dash"))
-            fig_struct.add_annotation(x=p_p, y=5.7, text="Pinch-off", font=dict(color="#ef4444", size=10), showarrow=False)
+            fig_struct.add_shape(type="line", x0=p_p, y0=0, x1=p_p, y1=5.5, line=dict(color=pinch_color, width=2, dash="dash"))
+            fig_struct.add_annotation(x=p_p, y=5.7, text="Pinch-off", font=dict(color=pinch_color, size=10), showarrow=False)
 
-    # 텍스트 라벨링
-    fig_struct.add_annotation(x=2, y=3.25, text=f"<b>S</b><br><small>{sd_label}</small>", font=dict(color="white", size=14), showarrow=False)
-    fig_struct.add_annotation(x=8, y=3.25, text=f"<b>D</b><br><small>{sd_label}</small>", font=dict(color="white", size=14), showarrow=False)
+    # 텍스트 라벨
+    fig_struct.add_annotation(x=2, y=3.5, text="<b>S</b>", font=dict(color="white", size=20), showarrow=False)
+    fig_struct.add_annotation(x=2, y=3.0, text=f"<i>{sd_label}</i>", font=dict(color="white", size=14), showarrow=False)
+    
+    fig_struct.add_annotation(x=8, y=3.5, text="<b>D</b>", font=dict(color="white", size=20), showarrow=False)
+    fig_struct.add_annotation(x=8, y=3.0, text=f"<i>{sd_label}</i>", font=dict(color="white", size=14), showarrow=False)
+    
     fig_struct.add_annotation(x=5, y=4.55, text="Gate (G)", font=dict(color="white", size=12), showarrow=False)
-    fig_struct.add_annotation(x=5, y=0.5, text=sub_text, font=dict(color="#475569", size=12), showarrow=False)
+    fig_struct.add_annotation(x=5, y=0.5, text=sub_text, font=dict(color="#475569", size=13), showarrow=False)
 
     fig_struct.update_layout(height=230, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 6]), plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_struct, use_container_width=True)
@@ -147,7 +150,7 @@ with col2:
 
 # --- [Column 3] AI 실시간 해설 ---
 with col3:
-    st.markdown("<div class='header-text'>🤖 AI 해설</div>", unsafe_allow_html=True)
+    st.markdown("<div class='header-text'>🤖 AI 실시간 바이브 해설</div>", unsafe_allow_html=True)
     
     if ask_ai_btn:
         if not api_key:
@@ -155,9 +158,7 @@ with col3:
         else:
             with st.spinner("AI 교수님이 분석 중입니다..."):
                 try:
-                    # AI 모델 호출 안정화 (404 에러 방지)
                     genai.configure(api_key=api_key)
-                    # 모델명을 가장 안정적인 기본형으로 명시
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     prompt = f"""
