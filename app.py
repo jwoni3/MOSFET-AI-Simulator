@@ -42,8 +42,16 @@ with st.sidebar:
         v_ds = st.slider("드레인 전압 (V_DS) [V]", -5.0, 0.0, -1.6, 0.1)
 
     st.markdown("---")
-    st.markdown("### **💬 AI에게 질문하기**")
-    user_query = st.text_area("질문 입력:", "현재 전압 상태를 물리적으로 설명해줘.", height=70)
+    
+    # [요청 사항] AI 질문 구역에 어울리는 노란색 강조 패널 주입
+    st.markdown("""
+    <div style='background-color: #fef9c3; padding: 12px; border-radius: 8px; border: 1px solid #fef08a; margin-bottom: 10px;'>
+        <h4 style='margin: 0; color: #854d0e; font-size: 16px;'>💡 AI 해설 받기</h4>
+        <p style='margin: 4px 0 0 0; font-size: 12px; color: #a16207;'>현재 MOSFET의 물리적 상태와 작동 원리를 AI가 심도 있게 분석해 드립니다.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    user_query = st.text_area("질문 입력 구역", "현재 전압 상태를 물리적으로 설명해줘.", height=70, label_visibility="collapsed")
     ask_ai_btn = st.button("AI 실시간 해설 받기", use_container_width=True)
 
 # ---------------------------------------------------------
@@ -85,17 +93,16 @@ with col1:
     
     fig_struct = go.Figure()
     
-    # [수정] PMOS 채널 색상을 보라색으로 분리 및 테두리 색상 설정
     if mos_type == "NMOS":
         sub_color, sd_color, ch_color = "#e0f2fe", "#4ade80", "#fc8181" 
         sub_text, sd_label = "p-Substrate", "n+"
         pinch_color = "#b91c1c"
+        ch_border_color = "#991b1b" 
     else:
-        sub_color, sd_color, ch_color = "#ffe4e6", "#60a5fa", "#a855f7" # S/D는 파랑, 채널은 보라색으로 뚜렷하게 분리
+        sub_color, sd_color, ch_color = "#ffe4e6", "#60a5fa", "#a855f7" 
         sub_text, sd_label = "n-Substrate", "p+"
         pinch_color = "#1d4ed8"
-
-    ch_border_color = "#1e293b" # 채널을 강조할 진한 테두리 색상 (공통)
+        ch_border_color = "#6b21a8" 
 
     # 기판, 산화막, 게이트
     fig_struct.add_shape(type="rect", x0=0, y0=0, x1=10, y1=4, fillcolor=sub_color, line=dict(width=0))
@@ -106,16 +113,20 @@ with col1:
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
     
-    # [수정] 채널 & 핀치오프 (line 속성에 color와 width를 주어 테두리 강조)
+    # Depletion Region 점선 가이드
+    fig_struct.add_shape(type="line", x0=0.5, y0=2.0, x1=9.5, y1=2.0, line=dict(color="#94a3b8", width=1.5, dash="dot"))
+    fig_struct.add_annotation(x=5, y=1.6, text="<i>Depletion Region</i>", font=dict(color="#64748b", size=11), showarrow=False)
+
+    # 채널 & 핀치오프
     if op_region != "차단 영역 (Cutoff)":
         if op_region == "선형 영역 (Linear)":
             t_d = 4.0 - 0.2 * (1 - abs_vds / max(v_ov, 0.001))
             fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", 
-                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=1.5), opacity=0.85)
+                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
         else:
             p_p = max(4.0, 7 - (abs_vds - v_ov) * 0.8)
             fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", 
-                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=1.5), opacity=0.85)
+                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
             fig_struct.add_shape(type="line", x0=p_p, y0=0, x1=p_p, y1=5.5, line=dict(color=pinch_color, width=2, dash="dash"))
             fig_struct.add_annotation(x=p_p, y=5.7, text="Pinch-off", font=dict(color=pinch_color, size=10), showarrow=False)
 
@@ -139,12 +150,10 @@ with col2:
     i_b = 0.5 * k_n * (v_b**2)
 
     fig_iv = go.Figure()
-    
     fig_iv.add_trace(go.Scatter(x=v_b, y=i_b, mode='lines', line=dict(color='#cbd5e1', dash='dash', width=1.5), name="포화 영역 경계선"))
     
     i_ax = [0 if abs_vgs < abs_vth else (k_n*(v_ov*v - 0.5*v**2) if v < v_ov else 0.5*k_n*v_ov**2*(1+0.02*(v-v_ov))) for v in v_ax]
     fig_iv.add_trace(go.Scatter(x=v_ax, y=i_ax, mode='lines', line=dict(color='#3b82f6', width=3), name="I-V 특성 곡선"))
-    
     fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="현재 동작점"))
     
     fig_iv.update_layout(
