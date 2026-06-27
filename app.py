@@ -6,6 +6,19 @@ import google.generativeai as genai
 # 페이지 기본 설정 (가로로 넓게 사용)
 st.set_page_config(page_title="MOSFET 물리 시뮬레이터 & AI 해설", layout="wide")
 
+# UI/UX 개선을 위한 커스텀 CSS 주입
+st.markdown("""
+<style>
+/* 좌측 제어 패널(첫 번째 컬럼) 배경색 및 스타일 지정 */
+div[data-testid="column"]:nth-of-type(1) {
+    background-color: #f4f7f6;
+    padding: 25px 20px;
+    border-radius: 15px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+}
+</style>
+""", unsafe_allow_html=True)
+
 # 레이아웃 구성: 좌(제어), 중(시각화), 우(AI)
 col_left, col_center, col_right = st.columns([1.2, 2.0, 1.2], gap="large")
 
@@ -15,13 +28,13 @@ col_left, col_center, col_right = st.columns([1.2, 2.0, 1.2], gap="large")
 with col_left:
     st.subheader("🎛️ 제어 및 입력 패널")
     
-    # API 키 자동 로드 설정 (Streamlit Secrets 활용)
+    # API 키 자동 로드 설정 (메시지 제거)
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
-        st.success("보안 금고(Secrets)에서 API 키를 성공적으로 불러왔습니다.")
     else:
         api_key = st.text_input("Google Gemini API Key", type="password", help="API 키를 찾을 수 없습니다. 직접 입력하세요.")
     
+    st.markdown("<br>", unsafe_allow_html=True)
     mos_type = st.selectbox("소자 타입 선택", ["NMOS", "PMOS"])
     
     # NMOS, PMOS에 따른 슬라이더 범위 및 부호 조정
@@ -36,7 +49,7 @@ with col_left:
 
     st.markdown("---")
     st.subheader("💬 AI에게 해설 요청")
-    user_query = st.text_area("궁금한 점을 자연어로 입력하세요:", "현재 전압 상태와 물리적 현상에 대해 설명해줘.")
+    user_query = st.text_area("궁금한 점을 입력하세요:", "현재 전압 상태와 물리적 현상에 대해 설명해줘.")
     ask_ai_btn = st.button("🤖 AI 실시간 해설 받기", use_container_width=True)
 
 # ---------------------------------------------------------
@@ -49,7 +62,7 @@ abs_vth = abs(v_th)
 
 v_ov = abs_vgs - abs_vth # Overdrive voltage
 
-# 동작 영역 판별
+# 동작 영역 판별 및 계산 (그래프 점과 완벽히 일치하도록 채널 길이 변조 0.02 반영)
 if abs_vgs < abs_vth:
     op_region = "차단 영역 (Cutoff)"
     i_d = 0.0
@@ -58,7 +71,7 @@ elif abs_vds < v_ov:
     i_d = k_n * ((v_ov) * abs_vds - 0.5 * (abs_vds ** 2))
 else:
     op_region = "포화 영역 (Saturation)"
-    i_d = 0.5 * k_n * (v_ov ** 2)
+    i_d = 0.5 * k_n * (v_ov ** 2) * (1 + 0.02 * abs_vds)
 
 # ---------------------------------------------------------
 # 3. 중앙 화면: 메인 시각화 (동작 상태, 구조, I-V 곡선)
@@ -66,8 +79,20 @@ else:
 with col_center:
     st.subheader("📊 실시간 소자 상태 및 시각화")
     
-    # 현재 상태 강조 표시
-    st.markdown(f"**현재 동작 영역:** :blue[{op_region}]")
+    # 동작 영역에 따른 강조 박스 색상 다르게 설정
+    if "포화" in op_region:
+        box_bg, box_border, text_color = "#e6f7ff", "#91d5ff", "#0050b3"
+    elif "선형" in op_region:
+        box_bg, box_border, text_color = "#f6ffed", "#b7eb8f", "#389e0d"
+    else:
+        box_bg, box_border, text_color = "#fff1f0", "#ffa39e", "#cf1322"
+        
+    st.markdown(f"""
+    <div style="background-color: {box_bg}; padding: 15px; border-radius: 10px; border: 2px solid {box_border}; text-align: center; margin-bottom: 20px;">
+        <h3 style="color: {text_color}; margin: 0;">현재 동작 영역 : <span style="font-weight: 800;">{op_region}</span></h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col_c1, col_c2 = st.columns(2)
     col_c1.metric(label="드레인 전류 (I_D)", value=f"{i_d:.2f} mA")
     col_c2.metric(label="오버드라이브 전압 (V_OV)", value=f"{max(0, v_ov):.2f} V")
@@ -86,7 +111,6 @@ with col_center:
         elif v < v_ov:
             id_array[i] = k_n * ((v_ov) * v - 0.5 * (v ** 2))
         else:
-            # 채널 길이 변조 효과(Lambda)를 살짝 주어 포화영역 기울기 구현
             id_array[i] = 0.5 * k_n * (v_ov ** 2) * (1 + 0.02 * v)
 
     fig_iv = go.Figure()
@@ -127,20 +151,18 @@ with col_center:
     fig_struct.add_shape(type="rect", x0=2.5, y0=4.3, x1=7.5, y1=5.3, fillcolor="#555555", line=dict(color="black"))
     fig_struct.add_annotation(x=5, y=4.8, text="Gate", font=dict(color="white"), showarrow=False)
     
-    # Channel Visualization
+    # Channel Visualization (에러 원인이었던 부분 수정 완료: line=dict(width=0))
     if op_region != "차단 영역 (Cutoff)":
         channel_color = "rgba(255, 0, 0, 0.5)" if mos_type=="NMOS" else "rgba(0, 0, 255, 0.5)"
         if op_region == "선형 영역 (Linear/Triode)":
-            # 선형: 드레인 쪽이 얕아지지만 끊기지는 않음
             fig_struct.add_trace(go.Scatter(x=[2.5, 7.5, 7.5, 2.5], y=[3.8, 3.8, 4.0, 4.0], 
-                                            fill='toself', fillcolor=channel_color, line=dict(color='clear'),
+                                            fill='toself', fillcolor=channel_color, line=dict(width=0),
                                             mode='none', showlegend=False, hoverinfo='skip'))
         elif op_region == "포화 영역 (Saturation)":
-            # 포화: Pinch-off 모사 (드레인 도달 전 채널이 좁아짐)
-            pinch_point = 7.5 - (0.5 * (abs_vds - v_ov)) # 임의의 핀치오프 시각화 좌표 계산
+            pinch_point = 7.5 - (0.5 * (abs_vds - v_ov)) 
             pinch_point = max(3.0, pinch_point)
             fig_struct.add_trace(go.Scatter(x=[2.5, pinch_point, 7.5, 2.5], y=[3.7, 4.0, 4.0, 4.0], 
-                                            fill='toself', fillcolor=channel_color, line=dict(color='clear'),
+                                            fill='toself', fillcolor=channel_color, line=dict(width=0),
                                             mode='none', showlegend=False, hoverinfo='skip'))
             fig_struct.add_annotation(x=pinch_point, y=3.7, text="Pinch-off", showarrow=True, arrowhead=2, ax=0, ay=-30)
 
