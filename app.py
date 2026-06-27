@@ -16,7 +16,11 @@ with col_left:
     st.subheader("🎛️ 제어 및 입력 패널")
     
     # API 키 입력 (보안을 위해 password 타입으로 처리)
-    api_key = st.text_input("Google Gemini API Key", type="password", help="AI 해설을 위해 API 키를 입력하세요.")
+    # 수정된 코드 (금고에서 키를 자동으로 가져옴)
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    api_key = st.text_input("Google Gemini API Key", type="password", help="API 키를 찾을 수 없습니다. 직접 입력하세요.")
     
     mos_type = st.selectbox("소자 타입 선택", ["NMOS", "PMOS"])
     
