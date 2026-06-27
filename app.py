@@ -6,7 +6,7 @@ import google.generativeai as genai
 # 1. 페이지 설정
 st.set_page_config(page_title="MOSFET AI 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
-# UI 최적화 CSS (다크모드 완벽 호환 및 사이드바 여백 극한 압축)
+# UI 최적화 CSS (AI 패널을 독립된 창처럼 보이게 하는 디자인 포함)
 st.markdown("""
     <style>
         .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
@@ -20,6 +20,23 @@ st.markdown("""
         .stSlider { padding-bottom: 0px !important; margin-bottom: -15px !important; }
         .stTextArea { padding-bottom: 0px !important; margin-bottom: -5px !important; }
         hr { margin-top: 10px !important; margin-bottom: 10px !important; }
+
+        /* [추가] 우측 AI 패널을 독립된 창처럼 꾸미는 CSS */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: #f1f5f9;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            padding: 10px;
+        }
+        
+        /* 다크모드 시 AI 패널 색상 자동 반전 */
+        @media (prefers-color-scheme: dark) {
+            [data-testid="stVerticalBlockBorderWrapper"] {
+                background-color: #1e293b;
+                border: 1px solid #334155;
+            }
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -162,41 +179,43 @@ with col2:
     fig_iv.update_yaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
     st.plotly_chart(fig_iv, use_container_width=True, theme="streamlit")
 
-# --- [Column 3] AI 실시간 해설 ---
+# --- [Column 3] AI 실시간 해설 (독립된 패널 컨테이너 적용) ---
 with col3:
-    st.markdown("<div class='header-text'>AI 실시간 바이브 해설</div>", unsafe_allow_html=True)
-    
-    if ask_ai_btn:
-        if not api_key:
-            st.error("⚠️ 사이드바에 API Key를 입력해주세요.")
+    # [수정] 테두리(border)가 있는 컨테이너를 사용하여 사이드바처럼 시각적으로 분리
+    with st.container(border=True):
+        st.markdown("<div class='header-text' style='text-align: center; color: #3b82f6;'>🤖 AI 실시간 해설 패널</div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+        
+        if ask_ai_btn:
+            if not api_key:
+                st.error("⚠️ 좌측 사이드바에 API Key를 입력해주세요.")
+            else:
+                with st.spinner("반도체 물성 분석 중..."):
+                    try:
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel('gemini-2.5-flash')
+                        
+                        prompt = f"""
+                        너는 학부 및 대학원 수준의 반도체 공학 전문가야. 아래 정보를 바탕으로 현재 MOSFET의 상태를 물리적으로 깊이 있게 분석해줘.
+                        
+                        [상태 정보]
+                        - 소자: {mos_type}
+                        - V_GS={v_gs}V, V_DS={v_ds}V, V_TH={v_th}V
+                        - 동작 영역: {op_region}
+                        - I_D={i_d:.2f}mA
+                        
+                        [사용자 질문]
+                        {user_query}
+                        
+                        [답변 지침]
+                        1. 불필요한 서론(인사말 등)이나 맺음말은 완전히 생략하되, 답변 전체를 반드시 **전문적이고 친절한 존댓말(해요체/하십시오체)**로 작성할 것. 반말 사용 금지.
+                        2. 표면적인 설명(예: 전압이 커서 전류가 흐른다)을 넘어, 페르미 준위(Fermi level), 에너지 밴드 벤딩(Energy band bending), 반전층(Inversion layer) 내 캐리어 농도, 공핍층(Depletion region) 역학, 전계(Electric field) 등 심도 있는 물성 지식을 포함할 것.
+                        3. 마크다운 불릿을 활용하여 가독성 높게 구조화할 것.
+                        """
+                        
+                        response = model.generate_content(prompt)
+                        st.markdown(response.text)
+                    except Exception as e:
+                        st.error(f"⚠️ AI 응답 생성 중 오류가 발생했습니다.\n\n상세 정보: {e}")
         else:
-            with st.spinner("반도체 물성 분석 중..."):
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    
-                    # [수정] 존댓말 강제 및 심도 있는 해설 유도
-                    prompt = f"""
-                    너는 학부 및 대학원 수준의 반도체 공학 전문가야. 아래 정보를 바탕으로 현재 MOSFET의 상태를 물리적으로 깊이 있게 분석해줘.
-                    
-                    [상태 정보]
-                    - 소자: {mos_type}
-                    - V_GS={v_gs}V, V_DS={v_ds}V, V_TH={v_th}V
-                    - 동작 영역: {op_region}
-                    - I_D={i_d:.2f}mA
-                    
-                    [사용자 질문]
-                    {user_query}
-                    
-                    [답변 지침]
-                    1. 불필요한 서론(인사말 등)이나 맺음말은 완전히 생략하되, 답변 전체를 반드시 **전문적이고 친절한 존댓말(해요체/하십시오체)**로 작성할 것. 반말 사용 금지.
-                    2. 표면적인 설명(예: 전압이 커서 전류가 흐른다)을 넘어, 페르미 준위(Fermi level), 에너지 밴드 벤딩(Energy band bending), 반전층(Inversion layer) 내 캐리어 농도, 공핍층(Depletion region) 역학, 전계(Electric field) 등 심도 있는 물성 지식을 포함할 것.
-                    3. 마크다운 불릿을 활용하여 가독성 높게 구조화할 것.
-                    """
-                    
-                    response = model.generate_content(prompt)
-                    st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"⚠️ AI 응답 생성 중 오류가 발생했습니다.\n\n상세 정보: {e}")
-    else:
-        st.info("👈 왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 받기] 버튼을 눌러보세요.")
+            st.info("👈 왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 받기] 버튼을 눌러보세요.")
