@@ -69,7 +69,6 @@ col1, col2, col3 = st.columns([1, 1.2, 1.2], gap="medium")
 with col1:
     st.markdown("<div class='header-text'>📊 실시간 소자 상태</div>", unsafe_allow_html=True)
     
-    # [수정] 동작 영역 박스 내부에 "현재 동작 영역" 라벨을 작게 추가
     box_color = "#e6f7ff" if "포화" in op_region else "#f6ffed" if "선형" in op_region else "#fff1f0"
     st.markdown(f"""
     <div style='background-color:{box_color}; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;'>
@@ -95,11 +94,11 @@ with col1:
         sub_text, sd_label = "n-Substrate", "p+"
         pinch_color = "#1d4ed8"
 
-    # 기판
+    # 기판, 산화막, 게이트
     fig_struct.add_shape(type="rect", x0=0, y0=0, x1=10, y1=4, fillcolor=sub_color, line=dict(width=0))
-    # 산화막 & 게이트
     fig_struct.add_shape(type="rect", x0=3, y0=4, x1=7, y1=4.15, fillcolor="#cbd5e1", line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=3, y0=4.15, x1=7, y1=5.0, fillcolor="#1e293b", line=dict(width=0))
+    
     # 소스 & 드레인
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
@@ -118,10 +117,8 @@ with col1:
     # 텍스트 라벨
     fig_struct.add_annotation(x=2, y=3.5, text="<b>S</b>", font=dict(color="white", size=20), showarrow=False)
     fig_struct.add_annotation(x=2, y=3.0, text=f"<i>{sd_label}</i>", font=dict(color="white", size=14), showarrow=False)
-    
     fig_struct.add_annotation(x=8, y=3.5, text="<b>D</b>", font=dict(color="white", size=20), showarrow=False)
     fig_struct.add_annotation(x=8, y=3.0, text=f"<i>{sd_label}</i>", font=dict(color="white", size=14), showarrow=False)
-    
     fig_struct.add_annotation(x=5, y=4.55, text="Gate (G)", font=dict(color="white", size=12), showarrow=False)
     fig_struct.add_annotation(x=5, y=0.5, text=sub_text, font=dict(color="#475569", size=13), showarrow=False)
 
@@ -158,8 +155,9 @@ with col3:
         else:
             with st.spinner("AI 교수님이 분석 중입니다..."):
                 try:
+                    # [수정] 빠르고 한도가 넉넉한 gemini-2.5-flash 모델로 변경
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = f"""
                     너는 반도체 공학 전문가 교수님이야. 아래 정보를 바탕으로 현재 MOSFET의 물리적 상태와 작동 원리를 친절하게 설명해줘.
@@ -173,7 +171,7 @@ with col3:
                     """
                     
                     response = model.generate_content(prompt)
-                    st.success("해설이 도착했습니다!")
+                    st.success("해설이 도착했습니다! 🎉")
                     st.markdown(response.text)
                 except Exception as e:
                     st.error(f"⚠️ AI 응답 생성 중 오류가 발생했습니다.\n\n상세 정보: {e}")
