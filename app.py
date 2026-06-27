@@ -6,17 +6,17 @@ import google.generativeai as genai
 # 1. 페이지 설정
 st.set_page_config(page_title="MOSFET AI 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
-# UI 최적화 CSS
+# UI 최적화 CSS (다크모드 충돌을 일으키던 강제 색상 제거)
 st.markdown("""
     <style>
-        [data-testid="stSidebar"] { background-color: #f8fafc; border-right: 1px solid #e2e8f0; }
         .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
-        .header-text { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px; margin-top: 5px; }
+        /* 색상 지정을 빼서 다크/라이트 모드에 따라 글자색이 자동 변경되게 함 */
+        .header-text { font-size: 20px; font-weight: 700; margin-bottom: 10px; margin-top: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
-# 메인 타이틀
-st.markdown("<h2 style='text-align: center; color: #1e293b; margin-bottom: 20px;'>🔌 MOSFET 물리 시뮬레이터</h2>", unsafe_allow_html=True)
+# 메인 타이틀 (강제 다크블루 색상 제거)
+st.markdown("<h2 style='text-align: center; margin-bottom: 20px;'>🔌 MOSFET 물리 시뮬레이터</h2>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 2. 좌측 사이드바: 제어 및 입력 패널
@@ -42,17 +42,12 @@ with st.sidebar:
         v_ds = st.slider("드레인 전압 (V_DS) [V]", -5.0, 0.0, -1.6, 0.1)
 
     st.markdown("---")
-    
-    # [요청 사항] AI 질문 구역에 어울리는 노란색 강조 패널 주입
-    st.markdown("""
-    <div style='background-color: #fef9c3; padding: 12px; border-radius: 8px; border: 1px solid #fef08a; margin-bottom: 10px;'>
-        <h4 style='margin: 0; color: #854d0e; font-size: 16px;'>💡 AI 해설 받기</h4>
-        <p style='margin: 4px 0 0 0; font-size: 12px; color: #a16207;'>현재 MOSFET의 물리적 상태와 작동 원리를 AI가 심도 있게 분석해 드립니다.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### **💬 AI에게 질문하기**")
     
     user_query = st.text_area("질문 입력 구역", "현재 전압 상태를 물리적으로 설명해줘.", height=70, label_visibility="collapsed")
-    ask_ai_btn = st.button("AI 실시간 해설 받기", use_container_width=True)
+    
+    # [수정] type="primary"를 추가하여 슬라이더와 동일한 강조 색상으로 버튼 렌더링
+    ask_ai_btn = st.button("AI 실시간 해설 받기", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------
 # 3. 물리 계산 로직
@@ -77,11 +72,12 @@ col1, col2, col3 = st.columns([1, 1.2, 1.2], gap="medium")
 with col1:
     st.markdown("<div class='header-text'>📊 실시간 소자 상태</div>", unsafe_allow_html=True)
     
+    # 동작 영역 박스는 파스텔톤 배경이므로 다크모드에서도 글자가 잘 보이도록 강제 어두운 텍스트색(#1e293b) 지정
     box_color = "#e6f7ff" if "포화" in op_region else "#f6ffed" if "선형" in op_region else "#fff1f0"
     st.markdown(f"""
     <div style='background-color:{box_color}; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;'>
-        <div style='font-size:12px; color:#64748b; margin-bottom:2px;'>현재 동작 영역</div>
-        <span style='font-size:18px; font-weight:700;'>{op_region}</span>
+        <div style='font-size:12px; color:#475569; margin-bottom:2px;'>현재 동작 영역</div>
+        <span style='font-size:18px; font-weight:700; color:#1e293b;'>{op_region}</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -113,7 +109,7 @@ with col1:
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
     
-    # Depletion Region 점선 가이드
+    # Depletion Region
     fig_struct.add_shape(type="line", x0=0.5, y0=2.0, x1=9.5, y1=2.0, line=dict(color="#94a3b8", width=1.5, dash="dot"))
     fig_struct.add_annotation(x=5, y=1.6, text="<i>Depletion Region</i>", font=dict(color="#64748b", size=11), showarrow=False)
 
@@ -139,7 +135,7 @@ with col1:
     fig_struct.add_annotation(x=5, y=0.5, text=sub_text, font=dict(color="#475569", size=13), showarrow=False)
 
     fig_struct.update_layout(height=230, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 6]), plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig_struct, use_container_width=True)
+    st.plotly_chart(fig_struct, use_container_width=True, theme="streamlit") # 다크/라이트모드 대응
 
 # --- [Column 2] I-V 특성 곡선 ---
 with col2:
@@ -156,18 +152,20 @@ with col2:
     fig_iv.add_trace(go.Scatter(x=v_ax, y=i_ax, mode='lines', line=dict(color='#3b82f6', width=3), name="I-V 특성 곡선"))
     fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="현재 동작점"))
     
+    # [수정] 다크모드 대응을 위해 plot_bgcolor를 투명하게 하고 반투명 그리드 사용
     fig_iv.update_layout(
         height=350, 
         margin=dict(l=0, r=0, t=10, b=0), 
         xaxis_title="V_DS (V)", 
         yaxis_title="I_D (mA)", 
         showlegend=True, 
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255, 255, 255, 0.8)", bordercolor="#e2e8f0", borderwidth=1),
-        plot_bgcolor='white'
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(128, 128, 128, 0.1)", bordercolor="rgba(128,128,128,0.2)", borderwidth=1),
+        plot_bgcolor='rgba(0,0,0,0)'
     )
-    fig_iv.update_xaxes(showgrid=True, gridcolor='#f1f5f9')
-    fig_iv.update_yaxes(showgrid=True, gridcolor='#f1f5f9')
-    st.plotly_chart(fig_iv, use_container_width=True)
+    fig_iv.update_xaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
+    fig_iv.update_yaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
+    
+    st.plotly_chart(fig_iv, use_container_width=True, theme="streamlit") # 다크/라이트모드 완벽 대응
 
 # --- [Column 3] AI 실시간 해설 ---
 with col3:
