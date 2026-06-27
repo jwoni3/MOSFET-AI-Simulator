@@ -6,16 +6,24 @@ import google.generativeai as genai
 # 1. 페이지 설정
 st.set_page_config(page_title="MOSFET AI 시뮬레이터", layout="wide", initial_sidebar_state="expanded")
 
-# UI 최적화 CSS (다크모드 충돌을 일으키던 강제 색상 제거)
+# UI 최적화 CSS (다크모드 완벽 호환 및 사이드바 여백 극한 압축)
 st.markdown("""
     <style>
         .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
-        /* 색상 지정을 빼서 다크/라이트 모드에 따라 글자색이 자동 변경되게 함 */
         .header-text { font-size: 20px; font-weight: 700; margin-bottom: 10px; margin-top: 5px; }
+        
+        /* 사이드바 배경 및 여백 최적화 (스크롤 방지) */
+        [data-testid="stSidebar"] { background-color: #f8fafc; border-right: 1px solid #e2e8f0; }
+        [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+        
+        /* 슬라이더 간격 및 텍스트 박스 간격 대폭 축소 */
+        .stSlider { padding-bottom: 0px !important; margin-bottom: -15px !important; }
+        .stTextArea { padding-bottom: 0px !important; margin-bottom: -5px !important; }
+        hr { margin-top: 10px !important; margin-bottom: 10px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# 메인 타이틀 (강제 다크블루 색상 제거)
+# 메인 타이틀
 st.markdown("<h2 style='text-align: center; margin-bottom: 20px;'>🔌 MOSFET 물리 시뮬레이터</h2>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
@@ -42,11 +50,8 @@ with st.sidebar:
         v_ds = st.slider("드레인 전압 (V_DS) [V]", -5.0, 0.0, -1.6, 0.1)
 
     st.markdown("---")
-    st.markdown("### **💬 AI에게 질문하기**")
     
-    user_query = st.text_area("질문 입력 구역", "현재 전압 상태를 물리적으로 설명해줘.", height=70, label_visibility="collapsed")
-    
-    # [수정] type="primary"를 추가하여 슬라이더와 동일한 강조 색상으로 버튼 렌더링
+    user_query = st.text_area("질문 입력 구역", "현재 전압 상태를 물리적으로 설명해줘.", height=60, label_visibility="collapsed")
     ask_ai_btn = st.button("AI 실시간 해설 받기", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------
@@ -72,7 +77,6 @@ col1, col2, col3 = st.columns([1, 1.2, 1.2], gap="medium")
 with col1:
     st.markdown("<div class='header-text'>📊 실시간 소자 상태</div>", unsafe_allow_html=True)
     
-    # 동작 영역 박스는 파스텔톤 배경이므로 다크모드에서도 글자가 잘 보이도록 강제 어두운 텍스트색(#1e293b) 지정
     box_color = "#e6f7ff" if "포화" in op_region else "#f6ffed" if "선형" in op_region else "#fff1f0"
     st.markdown(f"""
     <div style='background-color:{box_color}; padding:10px; border-radius:8px; border:1px solid #ddd; text-align:center;'>
@@ -100,33 +104,26 @@ with col1:
         pinch_color = "#1d4ed8"
         ch_border_color = "#6b21a8" 
 
-    # 기판, 산화막, 게이트
     fig_struct.add_shape(type="rect", x0=0, y0=0, x1=10, y1=4, fillcolor=sub_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=3, y0=4, x1=7, y1=4.15, fillcolor="#cbd5e1", line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=3, y0=4.15, x1=7, y1=5.0, fillcolor="#1e293b", line=dict(width=0))
     
-    # 소스 & 드레인
     fig_struct.add_shape(type="rect", x0=1, y0=2.5, x1=3, y1=4, fillcolor=sd_color, line=dict(width=0))
     fig_struct.add_shape(type="rect", x0=7, y0=2.5, x1=9, y1=4, fillcolor=sd_color, line=dict(width=0))
     
-    # Depletion Region
     fig_struct.add_shape(type="line", x0=0.5, y0=2.0, x1=9.5, y1=2.0, line=dict(color="#94a3b8", width=1.5, dash="dot"))
     fig_struct.add_annotation(x=5, y=1.6, text="<i>Depletion Region</i>", font=dict(color="#64748b", size=11), showarrow=False)
 
-    # 채널 & 핀치오프
     if op_region != "차단 영역 (Cutoff)":
         if op_region == "선형 영역 (Linear)":
             t_d = 4.0 - 0.2 * (1 - abs_vds / max(v_ov, 0.001))
-            fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", 
-                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
+            fig_struct.add_shape(type="path", path=f"M 3 4 L 7 4 L 7 {t_d} L 3 3.85 Z", fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
         else:
             p_p = max(4.0, 7 - (abs_vds - v_ov) * 0.8)
-            fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", 
-                                 fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
+            fig_struct.add_shape(type="path", path=f"M 3 4 L {p_p} 4 L 3 3.85 Z", fillcolor=ch_color, line=dict(color=ch_border_color, width=2), opacity=0.85)
             fig_struct.add_shape(type="line", x0=p_p, y0=0, x1=p_p, y1=5.5, line=dict(color=pinch_color, width=2, dash="dash"))
             fig_struct.add_annotation(x=p_p, y=5.7, text="Pinch-off", font=dict(color=pinch_color, size=10), showarrow=False)
 
-    # 텍스트 라벨
     fig_struct.add_annotation(x=2, y=3.5, text="<b>S</b>", font=dict(color="white", size=20), showarrow=False)
     fig_struct.add_annotation(x=2, y=3.0, text=f"<i>{sd_label}</i>", font=dict(color="white", size=14), showarrow=False)
     fig_struct.add_annotation(x=8, y=3.5, text="<b>D</b>", font=dict(color="white", size=20), showarrow=False)
@@ -135,7 +132,7 @@ with col1:
     fig_struct.add_annotation(x=5, y=0.5, text=sub_text, font=dict(color="#475569", size=13), showarrow=False)
 
     fig_struct.update_layout(height=230, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(visible=False, range=[0, 10]), yaxis=dict(visible=False, range=[0, 6]), plot_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(fig_struct, use_container_width=True, theme="streamlit") # 다크/라이트모드 대응
+    st.plotly_chart(fig_struct, use_container_width=True, theme="streamlit")
 
 # --- [Column 2] I-V 특성 곡선 ---
 with col2:
@@ -152,7 +149,6 @@ with col2:
     fig_iv.add_trace(go.Scatter(x=v_ax, y=i_ax, mode='lines', line=dict(color='#3b82f6', width=3), name="I-V 특성 곡선"))
     fig_iv.add_trace(go.Scatter(x=[abs_vds], y=[i_d], mode='markers', marker=dict(color='#ef4444', size=12, line=dict(color='white', width=1.5)), name="현재 동작점"))
     
-    # [수정] 다크모드 대응을 위해 plot_bgcolor를 투명하게 하고 반투명 그리드 사용
     fig_iv.update_layout(
         height=350, 
         margin=dict(l=0, r=0, t=10, b=0), 
@@ -164,8 +160,7 @@ with col2:
     )
     fig_iv.update_xaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
     fig_iv.update_yaxes(showgrid=True, gridcolor='rgba(128, 128, 128, 0.2)')
-    
-    st.plotly_chart(fig_iv, use_container_width=True, theme="streamlit") # 다크/라이트모드 완벽 대응
+    st.plotly_chart(fig_iv, use_container_width=True, theme="streamlit")
 
 # --- [Column 3] AI 실시간 해설 ---
 with col3:
@@ -180,6 +175,7 @@ with col3:
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
+                    # [수정] 존댓말 강제 및 심도 있는 해설 유도
                     prompt = f"""
                     너는 학부 및 대학원 수준의 반도체 공학 전문가야. 아래 정보를 바탕으로 현재 MOSFET의 상태를 물리적으로 깊이 있게 분석해줘.
                     
@@ -193,7 +189,7 @@ with col3:
                     {user_query}
                     
                     [답변 지침]
-                    1. "안녕하세요", "설명해 드리겠습니다", "도착했습니다" 등 인사말, 서론, 맺음말은 일절 생략하고 즉시 핵심 물리 해설로 진입할 것.
+                    1. 불필요한 서론(인사말 등)이나 맺음말은 완전히 생략하되, 답변 전체를 반드시 **전문적이고 친절한 존댓말(해요체/하십시오체)**로 작성할 것. 반말 사용 금지.
                     2. 표면적인 설명(예: 전압이 커서 전류가 흐른다)을 넘어, 페르미 준위(Fermi level), 에너지 밴드 벤딩(Energy band bending), 반전층(Inversion layer) 내 캐리어 농도, 공핍층(Depletion region) 역학, 전계(Electric field) 등 심도 있는 물성 지식을 포함할 것.
                     3. 마크다운 불릿을 활용하여 가독성 높게 구조화할 것.
                     """
