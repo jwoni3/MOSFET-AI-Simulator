@@ -37,8 +37,8 @@ st.markdown("""
     /* 플롯 여백 최소화 */
     .stPlotlyChart { margin: 0 !important; padding: 0 !important; }
 
-    /* 전체 페이지 상단 여백 */
-    .block-container { padding-top: 1rem !important; padding-bottom: 0.5rem !important; }
+    /* 전체 페이지 상단 여백 확보 (제목 잘림 방지) */
+    .block-container { padding-top: 3rem !important; padding-bottom: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +92,7 @@ bc_fwd  = V_bc > 0
 
 if be_fwd and not bc_fwd:
     mode, mode_en, mode_color, anim_key = "순방향 활성 영역", "Forward Active", "#f39c12", "forward_active"
-    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 포류 → 증폭기 동작"
+    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 표류 → 증폭기 동작"
 elif be_fwd and bc_fwd:
     mode, mode_en, mode_color, anim_key = "포화 영역", "Saturation", "#28a745", "saturation"
     mode_desc = "양쪽 접합 순방향 → 장벽 소실 → 캐리어 범람 → V_CE≈0.2V"
@@ -119,111 +119,99 @@ else:
 
 q_ic_mA = q_ic_A * 1000
 
-# ── BJT 구조 SVG (회로 기호 스타일)
+# ── BJT 구조 SVG (회로 기호 스타일 - 화이트 모던 테마)
 def make_bjt_svg(bjt_type, V_be, V_bc):
     is_npn = bjt_type == "NPN"
     vbe_lbl = f"V_BE={V_be:.2f}V" if is_npn else f"V_EB={V_be:.2f}V"
     vbc_lbl = f"V_BC={V_bc:.2f}V" if is_npn else f"V_CB={V_bc:.2f}V"
 
-    # 색상
-    e_color = "#4a9eff" if is_npn else "#ff6b6b"
-    c_color = "#4a9eff" if is_npn else "#ff6b6b"
-    b_color = "#ff6b6b" if is_npn else "#4a9eff"
+    # 밝은 테마 색상
+    e_color = "#3b82f6" if is_npn else "#ef4444"
+    c_color = "#3b82f6" if is_npn else "#ef4444"
+    b_color = "#ef4444" if is_npn else "#3b82f6"
+    line_color = "#475569" # 짙은 회색 선
+
+    # 영역 배경색
+    e_fill = "#e0f2fe" if is_npn else "#fee2e2"
+    e_stroke = "#0284c7" if is_npn else "#dc2626"
+    b_fill = "#fee2e2" if is_npn else "#e0f2fe"
+    b_stroke = "#dc2626" if is_npn else "#0284c7"
+    c_fill = "#f0f9ff" if is_npn else "#fef2f2"
+    
+    e_text_color = "#0369a1" if is_npn else "#b91c1c"
+    b_text_color = "#b91c1c" if is_npn else "#0369a1"
+    c_text_color = "#0369a1" if is_npn else "#b91c1c"
 
     # NPN: 이미터 화살표 밖으로, PNP: 이미터 화살표 안으로
-    # 회로 기호 스타일 BJT
-    arrow_e = """
-      <!-- 이미터 화살표 (NPN: 밖으로) -->
+    arrow_e = f"""
       <defs>
         <marker id="arrowE" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <polygon points="0,0 8,4 0,8" fill="#4a9eff"/>
+          <polygon points="0,0 8,4 0,8" fill="{e_color}"/>
         </marker>
       </defs>
-      <line x1="200" y1="110" x2="155" y2="140" stroke="#4a9eff" stroke-width="2.5" marker-end="url(#arrowE)"/>
-    """ if is_npn else """
-      <!-- 이미터 화살표 (PNP: 안으로) -->
+      <line x1="200" y1="110" x2="155" y2="140" stroke="{e_color}" stroke-width="2.5" marker-end="url(#arrowE)"/>
+    """ if is_npn else f"""
       <defs>
         <marker id="arrowE" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <polygon points="8,0 0,4 8,8" fill="#ff6b6b"/>
+          <polygon points="8,0 0,4 8,8" fill="{e_color}"/>
         </marker>
       </defs>
-      <line x1="155" y1="140" x2="200" y2="110" stroke="#ff6b6b" stroke-width="2.5" marker-end="url(#arrowE)"/>
+      <line x1="155" y1="140" x2="200" y2="110" stroke="{e_color}" stroke-width="2.5" marker-end="url(#arrowE)"/>
     """
 
     svg = f"""
 <svg width="340" height="200" viewBox="0 0 340 200" style="display:block; margin:auto;">
   <style>
-    .bjt-label {{ font-family: monospace; font-weight: bold; }}
-    .bjt-sub   {{ font-family: monospace; font-size: 10px; fill: #888; }}
-    .pin-label {{ font-family: monospace; font-size: 13px; font-weight: bold; }}
+    .bjt-label {{ font-family: sans-serif; font-weight: bold; }}
+    .bjt-sub   {{ font-family: sans-serif; font-size: 10px; fill: #64748b; }}
+    .pin-label {{ font-family: monospace; font-size: 14px; font-weight: bold; }}
   </style>
 
-  <!-- 베이스 수직 막대 -->
-  <rect x="195" y="60" width="10" height="80" rx="2"
-        fill="{b_color}" opacity="0.9"/>
+  <rect x="195" y="60" width="10" height="80" rx="2" fill="{line_color}"/>
 
-  <!-- 컬렉터 사선 (위) -->
   <line x1="200" y1="90" x2="255" y2="55" stroke="{c_color}" stroke-width="2.5"/>
-  <!-- 이미터 사선 (아래) -->
   {arrow_e}
 
-  <!-- 컬렉터 수직선 -->
   <line x1="255" y1="55" x2="255" y2="20" stroke="{c_color}" stroke-width="2.5"/>
-  <!-- 이미터 수직선 -->
   <line x1="155" y1="140" x2="155" y2="175" stroke="{e_color}" stroke-width="2.5"/>
 
-  <!-- 베이스 수평선 -->
   <line x1="115" y1="100" x2="195" y2="100" stroke="{b_color}" stroke-width="2.5"/>
 
-  <!-- 단자 원 -->
-  <circle cx="255" cy="18" r="5" fill="{c_color}" opacity="0.9"/>
-  <circle cx="155" cy="177" r="5" fill="{e_color}" opacity="0.9"/>
-  <circle cx="113" cy="100" r="5" fill="{b_color}" opacity="0.9"/>
+  <circle cx="255" cy="18" r="5" fill="{c_color}"/>
+  <circle cx="155" cy="177" r="5" fill="{e_color}"/>
+  <circle cx="113" cy="100" r="5" fill="{b_color}"/>
 
-  <!-- 단자 라벨 -->
   <text x="262" y="22" class="pin-label" fill="{c_color}">C</text>
   <text x="162" y="192" class="pin-label" fill="{e_color}">E</text>
   <text x="88"  y="104" class="pin-label" fill="{b_color}">B</text>
 
-  <!-- 영역 블록 (반도체 영역 표시) -->
-  <!-- Emitter -->
   <rect x="30" y="130" width="70" height="36" rx="5"
-        fill="{'#1a3a5c' if is_npn else '#5c1a1a'}"
-        stroke="{'#4a9eff' if is_npn else '#ff6b6b'}" stroke-width="1.5"/>
+        fill="{e_fill}" stroke="{e_stroke}" stroke-width="1.5"/>
   <text x="65" y="146" text-anchor="middle" class="bjt-label"
-        fill="{'#7ec8ff' if is_npn else '#ffaaaa'}" font-size="12">
-        {'N⁺' if is_npn else 'P⁺'}</text>
+        fill="{e_text_color}" font-size="12">{'N⁺' if is_npn else 'P⁺'}</text>
   <text x="65" y="160" text-anchor="middle" class="bjt-sub">Emitter</text>
 
-  <!-- Base -->
   <rect x="108" y="75" width="50" height="36" rx="5"
-        fill="{'#4a1a3a' if is_npn else '#1a3a2a'}"
-        stroke="{'#ff6b6b' if is_npn else '#4a9eff'}" stroke-width="1.5"/>
+        fill="{b_fill}" stroke="{b_stroke}" stroke-width="1.5"/>
   <text x="133" y="91" text-anchor="middle" class="bjt-label"
-        fill="{'#ffaaaa' if is_npn else '#7ec8ff'}" font-size="12">
-        {'P' if is_npn else 'N'}</text>
+        fill="{b_text_color}" font-size="12">{'P' if is_npn else 'N'}</text>
   <text x="133" y="105" text-anchor="middle" class="bjt-sub">Base</text>
 
-  <!-- Collector -->
   <rect x="230" y="28" width="70" height="36" rx="5"
-        fill="{'#1a3a1a' if is_npn else '#3a2a1a'}"
-        stroke="{'#4a9eff' if is_npn else '#ff6b6b'}" stroke-width="1.5"/>
+        fill="{c_fill}" stroke="{e_stroke}" stroke-width="1.5"/>
   <text x="265" y="44" text-anchor="middle" class="bjt-label"
-        fill="{'#7ec8ff' if is_npn else '#ffaa77'}" font-size="12">
-        {'N' if is_npn else 'P'}</text>
+        fill="{c_text_color}" font-size="12">{'N' if is_npn else 'P'}</text>
   <text x="265" y="58" text-anchor="middle" class="bjt-sub">Collector</text>
 
-  <!-- 전압 라벨 -->
-  <text x="170" y="172" text-anchor="middle" font-family="monospace" font-size="9"
-        fill="{'#7ac' if is_npn else '#ca7'}">{vbe_lbl}</text>
-  <text x="248" y="100" text-anchor="middle" font-family="monospace" font-size="9"
-        fill="{'#7ca' if is_npn else '#a7c'}">{vbc_lbl}</text>
+  <text x="170" y="172" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold"
+        fill="{e_color}">{vbe_lbl}</text>
+  <text x="248" y="100" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold"
+        fill="{c_color}">{vbc_lbl}</text>
 
-  <!-- BJT 타입 라벨 -->
-  <text x="310" y="100" text-anchor="middle" font-family="monospace" font-size="14"
-        font-weight="bold" fill="#ccc">{bjt_type}</text>
-  <text x="310" y="114" text-anchor="middle" font-family="monospace" font-size="10"
-        fill="#777">BJT</text>
+  <text x="310" y="100" text-anchor="middle" font-family="sans-serif" font-size="14"
+        font-weight="bold" fill="#334155">{bjt_type}</text>
+  <text x="310" y="114" text-anchor="middle" font-family="sans-serif" font-size="10"
+        fill="#64748b">BJT</text>
 </svg>"""
     return svg
 
@@ -239,7 +227,7 @@ desc_color = desc_color_map[anim_key]
 # ════════════════════════════════════════════════
 # 레이아웃: 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
-st.markdown("<h3 style='margin:0 0 6px 0; font-size:1.1rem;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='margin:0 0 12px 0; font-size:1.25rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
 
 col_stat, col_anim, col_ai = st.columns([0.25, 0.42, 0.33])
 
@@ -278,26 +266,23 @@ with col_stat:
     </div>
     """, unsafe_allow_html=True)
 
-# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션
+# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션 (화이트 톤)
 with col_anim:
     canvas_html = f"""
 <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
 
-  <!-- BJT 구조 그림 (회로 기호 스타일) -->
-  <div style="background:#1e1e1e; border-radius:8px; padding:4px 8px; width:100%;">
+  <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 8px; width:100%;">
     {bjt_svg}
   </div>
 
-  <!-- 캐리어 거동 애니메이션 -->
   <canvas id="bjtCanvas" width="420" height="145"
-          style="background:#2d2d2d; border-radius:8px; display:block;
-                 box-shadow:0 4px 10px rgba(0,0,0,0.15); width:100%;"></canvas>
+          style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; display:block;
+                 box-shadow:0 2px 5px rgba(0,0,0,0.05); width:100%;"></canvas>
 
-  <!-- 범례 -->
-  <p style="color:#aaa; font-size:0.78rem; margin:0; font-family:sans-serif; text-align:center;">
-      <span style="color:#00E6FF; font-weight:bold;">● 전자 (Electron)</span>
+  <p style="color:#64748b; font-size:0.78rem; margin:0; font-family:sans-serif; text-align:center;">
+      <span style="color:#0284c7; font-weight:bold;">● 전자 (Electron)</span>
       &nbsp;&nbsp;&nbsp;
-      <span style="color:#FF7043; font-weight:bold;">● 정공 (Hole)</span>
+      <span style="color:#dc2626; font-weight:bold;">● 정공 (Hole)</span>
   </p>
 </div>
 
@@ -322,14 +307,14 @@ with col_anim:
     function draw() {{
         ctx.clearRect(0, 0, W, H);
 
-        // 영역 배경
-        ctx.fillStyle='rgba(74,158,255,0.08)';  ctx.fillRect(0,0,130,H);
-        ctx.fillStyle='rgba(255,107,107,0.08)'; ctx.fillRect(130,0,160,H);
-        ctx.fillStyle='rgba(74,158,255,0.08)';  ctx.fillRect(290,0,W-290,H);
+        // 영역 배경 (파스텔 톤)
+        ctx.fillStyle='rgba(14,165,233,0.1)';  ctx.fillRect(0,0,130,H);
+        ctx.fillStyle='rgba(239,68,68,0.1)';   ctx.fillRect(130,0,160,H);
+        ctx.fillStyle='rgba(14,165,233,0.1)';  ctx.fillRect(290,0,W-290,H);
 
         // 접합면
         [130, 290].forEach(x => {{
-            ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
+            ctx.strokeStyle='#94a3b8'; ctx.lineWidth=1.5;
             ctx.setLineDash([4,4]);
             ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
             ctx.setLineDash([]);
@@ -340,14 +325,14 @@ with col_anim:
         const labels = BJT_TYPE==='NPN'
             ? ['Emitter (N+)','Base (P)','Collector (N)']
             : ['Emitter (P+)','Base (N)','Collector (P)'];
-        ctx.fillStyle='#7ec8ff'; ctx.fillText(labels[0], 8, 20);
-        ctx.fillStyle='#ffaaaa'; ctx.fillText(labels[1], 138, 20);
-        ctx.fillStyle='#7ec8ff'; ctx.fillText(labels[2], 298, 20);
+        ctx.fillStyle='#0369a1'; ctx.fillText(labels[0], 8, 20);
+        ctx.fillStyle='#b91c1c'; ctx.fillText(labels[1], 138, 20);
+        ctx.fillStyle='#0369a1'; ctx.fillText(labels[2], 298, 20);
 
         // 입자
         particles.forEach(p => {{
-            ctx.fillStyle   = p.type==='electron' ? '#00E6FF' : '#FF7043';
-            ctx.shadowBlur  = 5; ctx.shadowColor = ctx.fillStyle;
+            ctx.fillStyle   = p.type==='electron' ? '#0284c7' : '#dc2626';
+            ctx.shadowBlur  = 3; ctx.shadowColor = ctx.fillStyle;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur  = 0;
 
@@ -427,8 +412,8 @@ with col_ai:
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     resp  = model.generate_content(system_instruction)
                     st.markdown(f"""
-                    <div style='background:#f8f9fa; padding:12px; border-radius:10px;
-                                border:1px solid #eaeaea; font-size:0.78rem;
+                    <div style='background:#ffffff; padding:12px; border-radius:10px;
+                                border:1px solid #e2e8f0; font-size:0.78rem; color:#1e293b;
                                 height:360px; overflow-y:auto; line-height:1.45;'>
                         <strong>💡 AI 물리적 해설</strong><br>{resp.text}
                     </div>
@@ -439,8 +424,8 @@ with col_ai:
             st.error("GEMINI_API_KEY 미설정")
     else:
         st.markdown(f"""
-        <div style='background:#f8f9fa; padding:14px; border-radius:10px;
-                    border:1px solid #eaeaea; font-size:0.82rem;
+        <div style='background:#f8fafc; padding:14px; border-radius:10px;
+                    border:1px dashed #cbd5e1; font-size:0.82rem;
                     height:360px; color:#64748b;
                     display:flex; align-items:center; justify-content:center; text-align:center;'>
             사이드바 하단의<br>'🚀 Gemini 분석 요청' 버튼을<br>누르면 이 자리에<br>물리 밴드 관점의<br>상세 해설이 표시됩니다.
