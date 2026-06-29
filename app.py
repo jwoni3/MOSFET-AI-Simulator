@@ -459,13 +459,13 @@ with col2:
         textposition="top left" if bjt_type=="NPN" else "bottom right", 
         textfont=dict(size=11,color='#dc2626',weight='bold'), name="Q점"))
     
-    # [수정] 타이틀 텍스트 중앙 정렬 및 볼드 처리
+    # [수정] 폰트 크기를 줄이고 y 파라미터를 제거하여 자동 정렬되도록 하여 윗부분 잘림 방지. margin t(상단)도 50으로 확보
     fig_iv.update_layout(
-        title=dict(text="<b>I-V Characteristic Curve</b>", font=dict(size=14, color="black"), x=0.5, xanchor="center", y=0.95),
+        title=dict(text="<b>I-V Characteristic Curve</b>", font=dict(size=13, color="black"), x=0.5, xanchor="center"),
         xaxis_title="V_CE [V]", yaxis_title="I_C [mA]",
         xaxis=dict(range=[-0.2, V_CC+1.2] if bjt_type=="NPN" else [-(V_CC+1.2), 0.2], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#475569', zerolinewidth=1.5),
         yaxis=dict(range=[-0.5, sat_ic_mag+1.5] if bjt_type=="NPN" else [-(sat_ic_mag+1.5), 0.5], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#475569', zerolinewidth=1.5),
-        height=320, margin=dict(l=10,r=10,t=40,b=10), showlegend=True,
+        height=320, margin=dict(l=10,r=10,t=50,b=10), showlegend=True,
         legend=dict(x=0.75 if bjt_type=="NPN" else 0.02, y=0.98 if bjt_type=="NPN" else 0.15,
                     bgcolor='rgba(255,255,255,0.9)', bordercolor='#cbd5e1', borderwidth=1, font=dict(size=9)),
         plot_bgcolor='white'
@@ -542,12 +542,12 @@ with col2:
     fig_band.add_vline(x=2.8, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     fig_band.add_vline(x=5.2, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     
-    # [수정] 타이틀 텍스트 중앙 정렬 및 볼드 처리
+    # [수정] 폰트 크기를 줄이고 자동 정렬되도록 조정. margin t(상단)도 50으로 확보
     fig_band.update_layout(
-        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=14, color="black"), x=0.5, xanchor="center", y=0.95),
+        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=13, color="black"), x=0.5, xanchor="center"),
         xaxis=dict(visible=False, range=[-0.2,8.6]),
         yaxis=dict(visible=False, range=[min(ev_all)-0.35, max(ec_all)+0.8]),
-        height=320, margin=dict(l=10,r=10,t=40,b=10), showlegend=False, plot_bgcolor='white'
+        height=320, margin=dict(l=10,r=10,t=50,b=10), showlegend=False, plot_bgcolor='white'
     )
     st.plotly_chart(fig_band, use_container_width=True)
 
@@ -581,11 +581,12 @@ with col3:
         else:
             st.error("GEMINI_API_KEY가 설정되지 않았습니다.")
     else:
+        # [수정] 안내 메시지 박스를 첨부된 사진과 동일한 디자인으로 변경
         st.markdown(f"""
-        <div style='background:#f0f9ff; padding:16px; border-radius:10px;
-                    border:1px solid #bae6fd; font-size:0.88rem; font-weight:600;
-                    color:#0369a1; display:flex; align-items:flex-start; gap:8px;'>
-            <span>👉</span>
-            <span>왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 보기] 버튼을 눌러보세요.</span>
+        <div style='background-color:#eff4f9; padding: 18px 20px; border-radius: 8px;
+                    font-size: 0.95rem; font-weight: 500; color: #1e5a8f;
+                    display: flex; align-items: center; gap: 10px; border: none;'>
+            <span style='font-size: 1.2rem;'>👈</span>
+            <span style='line-height: 1.5;'>왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 보기] 버튼을 눌러보세요.</span>
         </div>
         """, unsafe_allow_html=True)
