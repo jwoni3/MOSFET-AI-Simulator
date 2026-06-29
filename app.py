@@ -48,7 +48,7 @@ if "GEMINI_API_KEY" in st.secrets:
 
 # ── 사이드바
 with st.sidebar:
-    st.markdown("### 🔌 BJT 시뮬레이터")
+    st.markdown("### 🔬 BJT 시뮬레이터")
     bjt_type = st.radio("소자 타입", ["NPN", "PNP"], horizontal=True, label_visibility="collapsed")
     st.markdown("---")
     st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
@@ -177,11 +177,6 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
             .line-style {{ stroke: #1e293b; stroke-width: 1.5; fill: none; }}
         </style>
         
-        <rect x="110" y="80" width="160" height="20" rx="4" fill="{mode_color}" opacity="0.15"/>
-        <text x="190" y="94" font-family="sans-serif" font-size="12" font-weight="bold" fill="{mode_color}" text-anchor="middle">
-            {mode} ({mode_en})
-        </text>
-
         <rect x="60" y="30" width="90" height="45" fill="{e_bg}" stroke="{e_fg}" stroke-width="1.5"/>
         <text x="105" y="48" class="region-title" fill="{e_fg}">{e_txt}</text>
         <text x="105" y="65" class="region-sub" fill="{e_fg}">Emitter</text>
@@ -224,10 +219,10 @@ bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 # 레이아웃: 메인 타이틀 & 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
 
-# 요청사항 반영: 스크린샷과 유사하게 왼쪽 정렬 + 영문 타이틀 + 하단 구분선
+# 요청사항 반영: 스크린샷과 유사하게 왼쪽 정렬 + 영문 타이틀 + 하단 구분선 + 현미경 이모지
 st.markdown(f"""
 <h1 style='text-align:left; font-size:2.4rem; font-weight:900; color:#1e293b; margin-top:0; padding-bottom:12px; border-bottom:1px solid #e2e8f0; margin-bottom: 24px;'>
-    🔌 {bjt_type} BJT SIMULATOR
+    🔬 {bjt_type} BJT SIMULATOR
 </h1>
 """, unsafe_allow_html=True)
 
