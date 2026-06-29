@@ -54,7 +54,7 @@ with st.sidebar:
     st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
 
     if "v_be_val" not in st.session_state: st.session_state.v_be_val = 0.75
-    if "v_bc_val" not in st.session_state: st.session_state.v_bc_val = -2.0
+    if "v_bc_val" not in st.session_state: st.session_state.v_bc_val = 2.80
 
     def update_be_slider(): st.session_state.v_be_val = st.session_state.be_num
     def update_be_num():    st.session_state.be_num   = st.session_state.v_be_val
@@ -63,9 +63,9 @@ with st.sidebar:
 
     label_be = "V_BE (V)" if bjt_type == "NPN" else "V_EB (V)"
     st.markdown(f"<span style='font-size:0.75rem;font-weight:700;color:#2c3e50;'>{label_be}</span>", unsafe_allow_html=True)
-    V_be = st.slider(label_be, min_value=-1.0, max_value=1.0, step=0.05,
+    V_be = st.slider(label_be, min_value=-5.0, max_value=5.0, step=0.05,
                      key="v_be_val", on_change=update_be_num, label_visibility="collapsed")
-    st.number_input(label_be, min_value=-1.0, max_value=1.0, step=0.05,
+    st.number_input(label_be, min_value=-5.0, max_value=5.0, step=0.05,
                     key="be_num", on_change=update_be_slider,
                     value=st.session_state.v_be_val, label_visibility="collapsed")
 
@@ -91,16 +91,16 @@ be_fwd  = V_be > 0
 bc_fwd  = V_bc > 0
 
 if be_fwd and not bc_fwd:
-    mode, mode_en, mode_color, anim_key = "순방향 활성 영역", "Forward Active", "#f39c12", "forward_active"
-    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 포류 → 증폭기 동작"
+    mode, mode_en, mode_color, anim_key = "순방향 활성 영역", "Forward Active", "#3b82f6", "forward_active"
+    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 표류 → 증폭기 동작"
 elif be_fwd and bc_fwd:
-    mode, mode_en, mode_color, anim_key = "포화 영역", "Saturation", "#28a745", "saturation"
-    mode_desc = "양쪽 접합 순방향 → 장벽 소실 → 캐리어 범람 → V_CE≈0.2V"
+    mode, mode_en, mode_color, anim_key = "포화 영역", "Saturation", "#22c55e", "saturation"
+    mode_desc = "양쪽 접합 순방향 → 장벽 소실 → 캐리어 범람 → 닫힌 스위치 (V_CE ≈ 0.2V)"
 elif not be_fwd and bc_fwd:
-    mode, mode_en, mode_color, anim_key = "역방향 활성 영역", "Reverse Active", "#9b59b6", "reverse_active"
+    mode, mode_en, mode_color, anim_key = "역방향 활성 영역", "Reverse Active", "#a855f7", "reverse_active"
     mode_desc = "B-E 역방향 + B-C 순방향 → 흐름 역전 → 낮은 β"
 else:
-    mode, mode_en, mode_color, anim_key = "차단 영역", "Cutoff", "#dc3545", "cutoff"
+    mode, mode_en, mode_color, anim_key = "차단 영역", "Cutoff", "#ef4444", "cutoff"
     mode_desc = "양쪽 접합 역방향 → 장벽 최대 → 전류 차단 → OFF 상태"
 
 mode_full = f"{mode} ({mode_en})"
@@ -119,76 +119,106 @@ else:
 
 q_ic_mA = q_ic_A * 1000
 
-# ── BJT 구조 SVG (교안 블록 스타일)
+# ── 테마 컬러 매핑 (스크린샷 완벽 반영)
+if bjt_type == "NPN":
+    e_bg, e_fg = "#e0f2fe", "#0ea5e9"  # Emitter: Blue
+    b_bg, b_fg = "#ffe4e6", "#f43f5e"  # Base: Pink/Red
+    c_bg, c_fg = "#dcfce7", "#22c55e"  # Collector: Green
+    e_txt, b_txt, c_txt = "N⁺", "P", "N"
+else:
+    e_bg, e_fg = "#ffe4e6", "#f43f5e"  # Emitter: Pink/Red
+    b_bg, b_fg = "#e0f2fe", "#0ea5e9"  # Base: Blue
+    c_bg, c_fg = "#fce7f3", "#db2777"  # Collector: Magenta
+    e_txt, b_txt, c_txt = "P⁺", "N", "P"
+
+# ── 배터리 기호 생성 함수
+def get_battery_svg(cx, cy, voltage, is_left_loop, color):
+    if abs(voltage) < 0.01:
+        return f'<line x1="{cx-20}" y1="{cy}" x2="{cx+20}" y2="{cy}" stroke="#1e293b" stroke-width="2"/>'
+    
+    # 물리적 극성 계산
+    pos_right = (voltage > 0) if is_left_loop else (voltage < 0)
+    
+    lines = [
+        f'<line x1="{cx-20}" y1="{cy}" x2="{cx-8}" y2="{cy}" stroke="#1e293b" stroke-width="2"/>',
+        f'<line x1="{cx+8}" y1="{cy}" x2="{cx+20}" y2="{cy}" stroke="#1e293b" stroke-width="2"/>'
+    ]
+    
+    if pos_right: # [-  |+]
+        lines.append(f'<line x1="{cx-5}" y1="{cy-10}" x2="{cx-5}" y2="{cy+10}" stroke="#1e293b" stroke-width="3"/>')
+        lines.append(f'<line x1="{cx+5}" y1="{cy-15}" x2="{cx+5}" y2="{cy+15}" stroke="#1e293b" stroke-width="1.5"/>')
+        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">-</text>')
+        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">+</text>')
+    else: # [+  |-]
+        lines.append(f'<line x1="{cx-5}" y1="{cy-15}" x2="{cx-5}" y2="{cy+15}" stroke="#1e293b" stroke-width="1.5"/>')
+        lines.append(f'<line x1="{cx+5}" y1="{cy-10}" x2="{cx+5}" y2="{cy+10}" stroke="#1e293b" stroke-width="3"/>')
+        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">+</text>')
+        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">-</text>')
+        
+    return "".join(lines)
+
+# ── BJT 구조 SVG
 def make_bjt_svg(bjt_type, V_be, V_bc):
     is_npn = bjt_type == "NPN"
     
-    # 교안과 유사한 색상 지정 (P영역은 파란색 계열, N영역은 밝은 회색 계열)
-    n_color = "#f1f5f9"
-    p_color = "#bfdbfe"
-    
-    e_fill = n_color if is_npn else p_color
-    b_fill = p_color if is_npn else n_color
-    c_fill = n_color if is_npn else p_color
-    
-    e_text = "N⁺" if is_npn else "P⁺"
-    b_text = "P" if is_npn else "N"
-    c_text = "N" if is_npn else "P"
-    
-    vbe_str = f"V_BE = {V_be:.2f}V" if is_npn else f"V_EB = {V_be:.2f}V"
-    vbc_str = f"V_BC = {V_bc:.2f}V" if is_npn else f"V_CB = {V_bc:.2f}V"
+    be_str = f"V_BE={V_be:.2f}V ({'순방향' if V_be > 0 else '역방향'})" if is_npn else f"V_EB={V_be:.2f}V ({'순방향' if V_be > 0 else '역방향'})"
+    bc_str = f"V_BC={V_bc:.2f}V ({'순방향' if V_bc > 0 else '역방향'})" if is_npn else f"V_CB={V_bc:.2f}V ({'순방향' if V_bc > 0 else '역방향'})"
+
+    bat_be = get_battery_svg(110, 150, V_be, True, e_fg)
+    bat_bc = get_battery_svg(270, 150, V_bc, False, b_fg)
 
     svg = f"""
-    <svg width="340" height="180" viewBox="0 0 340 180" style="display:block; margin:auto; background:#ffffff;">
+    <svg width="400" height="200" viewBox="0 0 400 200" style="display:block; margin:auto; background:#ffffff;">
         <style>
-            .region-text {{ font-family: sans-serif; font-size: 16px; font-weight: bold; fill: #1e293b; text-anchor: middle; dominant-baseline: middle; }}
-            .term-text {{ font-family: serif; font-size: 16px; font-weight: bold; fill: #000; dominant-baseline: middle; }}
-            .voltage-text {{ font-family: monospace; font-size: 12px; font-weight: bold; fill: #334155; text-anchor: middle; }}
-            .line-style {{ stroke: #1e293b; stroke-width: 2; fill: none; }}
+            .region-title {{ font-family: sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; }}
+            .region-sub {{ font-family: sans-serif; font-size: 11px; text-anchor: middle; }}
+            .term-text {{ font-family: serif; font-size: 16px; font-weight: bold; fill: #1e293b; dominant-baseline: middle; }}
+            .voltage-text {{ font-family: monospace; font-size: 11px; font-weight: bold; text-anchor: middle; }}
+            .line-style {{ stroke: #1e293b; stroke-width: 1.5; fill: none; }}
         </style>
         
-        <rect x="70" y="40" width="80" height="50" fill="{e_fill}" stroke="#1e293b" stroke-width="2"/>
-        <text x="110" y="66" class="region-text">{e_text}</text>
+        <rect x="110" y="80" width="160" height="20" rx="4" fill="{mode_color}" opacity="0.15"/>
+        <text x="190" y="94" font-family="sans-serif" font-size="12" font-weight="bold" fill="{mode_color}" text-anchor="middle">
+            {mode} ({mode_en})
+        </text>
+
+        <rect x="60" y="30" width="90" height="45" fill="{e_bg}" stroke="{e_fg}" stroke-width="1.5"/>
+        <text x="105" y="48" class="region-title" fill="{e_fg}">{e_txt}</text>
+        <text x="105" y="65" class="region-sub" fill="{e_fg}">Emitter</text>
         
-        <rect x="150" y="40" width="40" height="50" fill="{b_fill}" stroke="#1e293b" stroke-width="2"/>
-        <text x="170" y="66" class="region-text">{b_text}</text>
+        <rect x="150" y="30" width="60" height="45" fill="{b_bg}" stroke="{b_fg}" stroke-width="1.5"/>
+        <text x="180" y="48" class="region-title" fill="{b_fg}">{b_txt}</text>
+        <text x="180" y="65" class="region-sub" fill="{b_fg}">Base</text>
         
-        <rect x="190" y="40" width="80" height="50" fill="{c_fill}" stroke="#1e293b" stroke-width="2"/>
-        <text x="230" y="66" class="region-text">{c_text}</text>
+        <rect x="210" y="30" width="100" height="45" fill="{c_bg}" stroke="{c_fg}" stroke-width="1.5"/>
+        <text x="260" y="48" class="region-title" fill="{c_fg}">{c_txt}</text>
+        <text x="260" y="65" class="region-sub" fill="{c_fg}">Collector</text>
         
-        <line x1="70" y1="65" x2="30" y2="65" class="line-style"/>
-        <circle cx="28" cy="65" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
-        <text x="12" y="66" class="term-text">E</text>
+        <line x1="60" y1="52" x2="20" y2="52" class="line-style"/>
+        <text x="5" y="54" class="term-text">E</text>
         
-        <line x1="270" y1="65" x2="310" y2="65" class="line-style"/>
-        <circle cx="312" cy="65" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
-        <text x="325" y="66" class="term-text">C</text>
+        <line x1="310" y1="52" x2="350" y2="52" class="line-style"/>
+        <text x="360" y="54" class="term-text">C</text>
         
-        <line x1="170" y1="90" x2="170" y2="130" class="line-style"/>
-        <circle cx="170" cy="132" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
-        <text x="170" y="148" class="term-text" style="text-anchor: middle;">B</text>
+        <line x1="180" y1="75" x2="180" y2="150" class="line-style"/>
+        <text x="180" y="105" class="term-text" style="text-anchor: middle; background: white;">B</text>
         
-        <line x1="30" y1="65" x2="30" y2="132" class="line-style"/>
-        <line x1="30" y1="132" x2="65" y2="132" class="line-style"/>
-        <text x="100" y="135" class="voltage-text">{vbe_str}</text>
-        <line x1="135" y1="132" x2="170" y2="132" class="line-style"/>
+        <line x1="20" y1="52" x2="20" y2="150" class="line-style"/>
+        <line x1="20" y1="150" x2="90" y2="150" class="line-style"/>
+        {bat_be}
+        <text x="110" y="175" class="voltage-text" fill="{e_fg}">{be_str}</text>
+        <line x1="130" y1="150" x2="180" y2="150" class="line-style"/>
         
-        <line x1="310" y1="65" x2="310" y2="132" class="line-style"/>
-        <line x1="310" y1="132" x2="275" y2="132" class="line-style"/>
-        <text x="240" y="135" class="voltage-text">{vbc_str}</text>
-        <line x1="205" y1="132" x2="170" y2="132" class="line-style"/>
+        <line x1="350" y1="52" x2="350" y2="150" class="line-style"/>
+        <line x1="350" y1="150" x2="290" y2="150" class="line-style"/>
+        {bat_bc}
+        <text x="270" y="175" class="voltage-text" fill="{b_fg}">{bc_str}</text>
+        <line x1="250" y1="150" x2="180" y2="150" class="line-style"/>
     </svg>
     """
     return svg
 
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
-
-# ── 동작 설명 색상
-desc_color_map = {
-    "forward_active": "#f39c12", "saturation": "#28a745",
-    "reverse_active": "#9b59b6", "cutoff": "#dc3545",
-}
-desc_color = desc_color_map[anim_key]
 
 # ════════════════════════════════════════════════
 # 레이아웃: 상단 3컬럼 (stat | BJT구조+애니 | AI)
@@ -203,13 +233,13 @@ with col_stat:
     st.markdown(f"""
     <div class='stat-card'>
         <div class='stat-title'>Operating Region</div>
-        <div style='font-size:1.2rem; font-weight:800; color:{mode_color}; line-height:1.2; margin-bottom:4px;'>
+        <div style='font-size:1.6rem; font-weight:800; color:{mode_color}; line-height:1.2; margin-bottom:4px;'>
             {mode}
         </div>
-        <div style='font-size:0.8rem; color:{mode_color}; margin-bottom:10px;'>({mode_en})</div>
-        <div style='display:grid; grid-template-columns:1fr 1fr; gap:8px;'>
+        <div style='font-size:0.9rem; color:{mode_color}; margin-bottom:15px;'>({mode_en})</div>
+        <div style='display:grid; grid-template-columns:1fr 1fr; gap:12px;'>
             <div>
-                <div class='stat-label'>인가전압 |V_CE|</div>
+                <div class='stat-label'>인가전압 V_CE</div>
                 <div class='stat-value'>{abs(V_be - V_bc):.2f} V</div>
             </div>
             <div>
@@ -225,31 +255,31 @@ with col_stat:
                 <div class='stat-value'>{q_vce:.2f} V</div>
             </div>
         </div>
-        <div style='margin-top:10px; padding:8px 10px; background:#f8f9fa;
-                    border-left:3px solid {desc_color}; border-radius:4px;
-                    font-size:0.74rem; color:{desc_color}; line-height:1.45;'>
+        <div style='margin-top:15px; padding:10px 12px; background:#f8f9fa;
+                    border-left:4px solid {mode_color}; border-radius:6px;
+                    font-size:0.78rem; font-weight:bold; color:{mode_color}; line-height:1.45;'>
             {mode_desc}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션 (화이트 톤)
+# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션 (컬러 완벽 반영)
 with col_anim:
     canvas_html = f"""
-<div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+<div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
 
-  <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 8px; width:100%;">
+  <div style="background:#ffffff; border:none; width:100%;">
     {bjt_svg}
   </div>
 
-  <canvas id="bjtCanvas" width="420" height="145"
-          style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; display:block;
-                 box-shadow:0 2px 5px rgba(0,0,0,0.05); width:100%;"></canvas>
+  <canvas id="bjtCanvas" width="450" height="150"
+          style="background:#ffffff; border-radius:8px; display:block;
+                 box-shadow:0 2px 8px rgba(0,0,0,0.08); width:100%;"></canvas>
 
-  <p style="color:#64748b; font-size:0.78rem; margin:0; font-family:sans-serif; text-align:center;">
-      <span style="color:#0284c7; font-weight:bold;">● 전자 (Electron)</span>
+  <p style="color:#64748b; font-size:0.85rem; margin:0; font-family:sans-serif; text-align:center; font-weight:bold;">
+      <span style="color:#06b6d4;">● 전자 (Electron)</span>
       &nbsp;&nbsp;&nbsp;
-      <span style="color:#dc2626; font-weight:bold;">● 정공 (Hole)</span>
+      <span style="color:#f97316;">● 정공 (Hole)</span>
   </p>
 </div>
 
@@ -261,45 +291,45 @@ with col_anim:
     const BJT_TYPE = '{bjt_type}';
     const W = canvas.width, H = canvas.height;
 
-    const N_e = 35, N_h = 35;
+    const N_e = 40, N_h = 40;
     let particles = [];
 
     for (let i = 0; i < N_e; i++) {{
-        particles.push({{ x: Math.random()*W, y: 35+Math.random()*75, r:3.5, type:'electron', dir:Math.random()<0.5?1:-1 }});
+        particles.push({{ x: Math.random()*W, y: 35+Math.random()*90, r:4, type:'electron', dir:Math.random()<0.5?1:-1 }});
     }}
     for (let i = 0; i < N_h; i++) {{
-        particles.push({{ x: Math.random()*W, y: 35+Math.random()*75, r:3.5, type:'hole', dir:Math.random()<0.5?1:-1 }});
+        particles.push({{ x: Math.random()*W, y: 35+Math.random()*90, r:4, type:'hole', dir:Math.random()<0.5?1:-1 }});
     }}
 
     function draw() {{
         ctx.clearRect(0, 0, W, H);
 
-        // 영역 배경 (파스텔 톤)
-        ctx.fillStyle='rgba(14,165,233,0.1)';  ctx.fillRect(0,0,130,H);
-        ctx.fillStyle='rgba(239,68,68,0.1)';   ctx.fillRect(130,0,160,H);
-        ctx.fillStyle='rgba(14,165,233,0.1)';  ctx.fillRect(290,0,W-290,H);
+        // 영역 배경색 (파스텔톤 매핑)
+        ctx.fillStyle='{e_bg}'; ctx.fillRect(0,0,140,H);
+        ctx.fillStyle='{b_bg}'; ctx.fillRect(140,0,160,H);
+        ctx.fillStyle='{c_bg}'; ctx.fillRect(300,0,W-300,H);
 
-        // 접합면
-        [130, 290].forEach(x => {{
-            ctx.strokeStyle='#94a3b8'; ctx.lineWidth=1.5;
-            ctx.setLineDash([4,4]);
+        // 접합면 경계선
+        [140, 300].forEach(x => {{
+            ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=2;
+            ctx.setLineDash([5,5]);
             ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
             ctx.setLineDash([]);
         }});
 
         // 영역 라벨
-        ctx.font='11px monospace';
+        ctx.font='bold 12px sans-serif';
         const labels = BJT_TYPE==='NPN'
             ? ['Emitter (N+)','Base (P)','Collector (N)']
             : ['Emitter (P+)','Base (N)','Collector (P)'];
-        ctx.fillStyle='#0369a1'; ctx.fillText(labels[0], 8, 20);
-        ctx.fillStyle='#b91c1c'; ctx.fillText(labels[1], 138, 20);
-        ctx.fillStyle='#0369a1'; ctx.fillText(labels[2], 298, 20);
+        ctx.fillStyle='{e_fg}'; ctx.fillText(labels[0], 10, 22);
+        ctx.fillStyle='{b_fg}'; ctx.fillText(labels[1], 148, 22);
+        ctx.fillStyle='{c_fg}'; ctx.fillText(labels[2], 308, 22);
 
-        // 입자
+        // 입자 애니메이션 (전자 청록, 정공 주황)
         particles.forEach(p => {{
-            ctx.fillStyle   = p.type==='electron' ? '#0284c7' : '#dc2626';
-            ctx.shadowBlur  = 3; ctx.shadowColor = ctx.fillStyle;
+            ctx.fillStyle   = p.type==='electron' ? '#06b6d4' : '#f97316';
+            ctx.shadowBlur  = 4; ctx.shadowColor = ctx.fillStyle;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur  = 0;
 
@@ -307,50 +337,50 @@ with col_anim:
 
             if (MODE==='forward_active') {{
                 if (BJT_TYPE==='NPN') {{
-                    if (p.type==='electron') {{ vx=3.2; if(p.x>W) p.x=0; }}
-                    else                     {{ vx=-1.2; if(p.x<0) p.x=290; }}
+                    if (p.type==='electron') {{ vx=3.5; if(p.x>W) p.x=0; }}
+                    else                     {{ vx=-1.5; if(p.x<0) p.x=300; }}
                 }} else {{
-                    if (p.type==='hole')     {{ vx=3.2; if(p.x>W) p.x=0; }}
-                    else                     {{ vx=-1.2; if(p.x<0) p.x=290; }}
+                    if (p.type==='hole')     {{ vx=3.5; if(p.x>W) p.x=0; }}
+                    else                     {{ vx=-1.5; if(p.x<0) p.x=300; }}
                 }}
             }} else if (MODE==='saturation') {{
                 if (BJT_TYPE==='NPN') {{
                     if (p.type==='electron') {{
-                        vx=p.dir*3.0;
+                        vx=p.dir*3.5;
                         if(vx>0 && p.x>W) p.x=0;
                         if(vx<0 && p.x<0) p.x=W;
                     }} else {{
-                        vx=p.dir*1.5;
-                        if(vx>0 && p.x>W) p.x=210;
-                        if(vx<0 && p.x<0) p.x=210;
+                        vx=p.dir*2.0;
+                        if(vx>0 && p.x>W) p.x=220;
+                        if(vx<0 && p.x<0) p.x=220;
                     }}
                 }} else {{
                     if (p.type==='hole') {{
-                        vx=p.dir*3.0;
+                        vx=p.dir*3.5;
                         if(vx>0 && p.x>W) p.x=0;
                         if(vx<0 && p.x<0) p.x=W;
                     }} else {{
-                        vx=p.dir*1.5;
-                        if(vx>0 && p.x>W) p.x=210;
-                        if(vx<0 && p.x<0) p.x=210;
+                        vx=p.dir*2.0;
+                        if(vx>0 && p.x>W) p.x=220;
+                        if(vx<0 && p.x<0) p.x=220;
                     }}
                 }}
             }} else if (MODE==='reverse_active') {{
                 if (BJT_TYPE==='NPN') {{
-                    if (p.type==='electron') {{ vx=-3.2; if(p.x<0) p.x=W; }}
-                    else                     {{ vx=1.2;  if(p.x>W) p.x=130; }}
+                    if (p.type==='electron') {{ vx=-3.5; if(p.x<0) p.x=W; }}
+                    else                     {{ vx=1.5;  if(p.x>W) p.x=140; }}
                 }} else {{
-                    if (p.type==='hole')     {{ vx=-3.2; if(p.x<0) p.x=W; }}
-                    else                     {{ vx=1.2;  if(p.x>W) p.x=130; }}
+                    if (p.type==='hole')     {{ vx=-3.5; if(p.x<0) p.x=W; }}
+                    else                     {{ vx=1.5;  if(p.x>W) p.x=140; }}
                 }}
             }} else {{
-                vx=0; scatterX=0.6;
+                vx=0; scatterX=0.8;
             }}
 
             p.x += vx + (Math.random()-0.5)*scatterX;
-            p.y += (Math.random()-0.5)*0.6;
-            if (p.y<28)  p.y=H-10;
-            if (p.y>H-5) p.y=28;
+            p.y += (Math.random()-0.5)*0.8;
+            if (p.y<35)  p.y=H-15;
+            if (p.y>H-10) p.y=35;
         }});
 
         requestAnimationFrame(draw);
@@ -359,7 +389,7 @@ with col_anim:
 }})();
 </script>
 """
-    # 글씨 잘리는 거 방지: height를 450으로 넉넉하게 유지
+    # 넉넉한 공간 부여
     components.html(canvas_html, height=450)
 
 # ── 오른쪽: AI 분석
@@ -380,10 +410,10 @@ with col_ai:
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     resp  = model.generate_content(system_instruction)
                     st.markdown(f"""
-                    <div style='background:#ffffff; padding:12px; border-radius:10px;
-                                border:1px solid #e2e8f0; font-size:0.78rem; color:#1e293b;
-                                height:360px; overflow-y:auto; line-height:1.45;'>
-                        <strong>💡 AI 물리적 해설</strong><br>{resp.text}
+                    <div style='background:#ffffff; padding:15px; border-radius:10px;
+                                border:1px solid #e2e8f0; font-size:0.82rem; color:#1e293b;
+                                height:390px; overflow-y:auto; line-height:1.6;'>
+                        <strong>💡 AI 물리적 해설</strong><br><br>{resp.text}
                     </div>
                     """, unsafe_allow_html=True)
                 except Exception as e:
@@ -393,23 +423,23 @@ with col_ai:
     else:
         st.markdown(f"""
         <div style='background:#f8fafc; padding:14px; border-radius:10px;
-                    border:1px dashed #cbd5e1; font-size:0.82rem;
-                    height:360px; color:#64748b;
+                    border:1px dashed #cbd5e1; font-size:0.85rem; font-weight:bold;
+                    height:390px; color:#64748b;
                     display:flex; align-items:center; justify-content:center; text-align:center;'>
             사이드바 하단의<br>'🚀 AI 분석 요청' 버튼을<br>누르면 이 자리에<br>물리 밴드 관점의<br>상세한 AI 해설이 표시됩니다.
         </div>
         """, unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════
 # 하단: 에너지 밴드 다이어그램 | I_C-V_CE 특성 곡선  (나란히)
 # ════════════════════════════════════════════════
 col_band, col_iv = st.columns(2)
 
-# ── 에너지 밴드 다이어그램
+# ── 에너지 밴드 다이어그램 (파스텔 컬러 적용)
 with col_band:
-    st.markdown("<span style='font-size:0.85rem; font-weight:700; color:#334155;'>🔋 에너지 밴드 다이어그램</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-size:0.9rem; font-weight:800; color:#334155;'>🔋 에너지 밴드 다이어그램</span>", unsafe_allow_html=True)
     fig_band = go.Figure()
     E_g = 1.12
     x_all = np.linspace(0, 8.0, 400)
@@ -440,103 +470,111 @@ with col_band:
             ec_all[i] = E_C_Base + (E_C_Collector-E_C_Base)*(1-np.cos(t))/2
     ev_all = ec_all - E_g
 
-    fig_band.add_vrect(x0=0,   x1=2.8, fillcolor="rgba(173,216,230,0.25)", line_width=0)
-    fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor="rgba(255,182,193,0.25)", line_width=0)
-    fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor="rgba(144,238,144,0.25)", line_width=0)
-    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='black',width=2.5), name='E_c'))
-    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='black',width=2.5), name='E_v'))
-    fig_band.add_trace(go.Scatter(x=[0,2.4],   y=[E_F_Emitter,E_F_Emitter],   mode='lines', line=dict(color='blue',width=2,dash='dash'), name='E_F(E)'))
-    fig_band.add_trace(go.Scatter(x=[3.2,4.8], y=[E_F_Base,E_F_Base],         mode='lines', line=dict(color='blue',width=2,dash='dash'), name='E_F(B)'))
-    fig_band.add_trace(go.Scatter(x=[5.6,8.0], y=[E_F_Collector,E_F_Collector],mode='lines', line=dict(color='blue',width=2,dash='dash'), name='E_F(C)'))
-    fig_band.add_annotation(x=8.15, y=ec_all[-1]+0.05, text="<b>E_C</b>", showarrow=False, font=dict(size=11,color='black'))
-    fig_band.add_annotation(x=8.15, y=ev_all[-1]-0.05, text="<b>E_V</b>", showarrow=False, font=dict(size=11,color='black'))
+    # 배경색 매핑 (파스텔)
+    c_bg_e = "rgba(224,242,254,0.7)" if bjt_type=="NPN" else "rgba(255,228,230,0.7)"
+    c_bg_b = "rgba(255,228,230,0.7)" if bjt_type=="NPN" else "rgba(224,242,254,0.7)"
+    c_bg_c = "rgba(220,252,231,0.7)" if bjt_type=="NPN" else "rgba(252,231,243,0.7)"
 
-    e_lbl = "EMITTER (N⁺)" if bjt_type=="NPN" else "EMITTER (P⁺)"
-    b_lbl = "BASE (P)"     if bjt_type=="NPN" else "BASE (N)"
-    c_lbl = "COLLECTOR (N)"if bjt_type=="NPN" else "COLLECTOR (P)"
-    fig_band.add_annotation(x=1.4, y=max(ec_all)+0.5, text=f"<b>{e_lbl}</b>", showarrow=False, font=dict(size=10,color='#1565C0'))
-    fig_band.add_annotation(x=4.0, y=max(ec_all)+0.5, text=f"<b>{b_lbl}</b>", showarrow=False, font=dict(size=10,color='#B71C1C'))
-    fig_band.add_annotation(x=6.6, y=max(ec_all)+0.5, text=f"<b>{c_lbl}</b>", showarrow=False, font=dict(size=10,color='#1B5E20'))
+    fig_band.add_vrect(x0=0,   x1=2.8, fillcolor=c_bg_e, line_width=0)
+    fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor=c_bg_b, line_width=0)
+    fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor=c_bg_c, line_width=0)
+    
+    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#1e293b',width=3), name='E_c'))
+    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#1e293b',width=3), name='E_v'))
+    
+    fig_band.add_trace(go.Scatter(x=[0,2.4],   y=[E_F_Emitter,E_F_Emitter],   mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(E)'))
+    fig_band.add_trace(go.Scatter(x=[3.2,4.8], y=[E_F_Base,E_F_Base],         mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(B)'))
+    fig_band.add_trace(go.Scatter(x=[5.6,8.0], y=[E_F_Collector,E_F_Collector],mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(C)'))
+    
+    fig_band.add_annotation(x=8.15, y=ec_all[-1], text="<b>E_c</b>", showarrow=False, font=dict(size=12,color='black'))
+    fig_band.add_annotation(x=8.15, y=ev_all[-1], text="<b>E_v</b>", showarrow=False, font=dict(size=12,color='black'))
+
+    fig_band.add_annotation(x=1.4, y=max(ec_all)+0.5, text=f"<b>EMITTER ({e_txt})</b>", showarrow=False, font=dict(size=11,color=e_fg))
+    fig_band.add_annotation(x=4.0, y=max(ec_all)+0.5, text=f"<b>BASE ({b_txt})</b>", showarrow=False, font=dict(size=11,color=b_fg))
+    fig_band.add_annotation(x=6.6, y=max(ec_all)+0.5, text=f"<b>COLLECTOR ({c_txt})</b>", showarrow=False, font=dict(size=11,color=c_fg))
 
     np.random.seed(42)
+    c_elec = '#06b6d4' # 청록색 전자
+    c_hole = '#f97316' # 주황색 정공
+    
     if bjt_type == "NPN":
         fig_band.add_trace(go.Scatter(x=np.random.uniform(0.2,2.2,16), y=E_C_Emitter+np.random.uniform(0.02,0.15,16),
-            mode='markers', marker=dict(color='#1565C0',size=8,line=dict(color='#0D47A1',width=1.5)), name='전자(e⁻)'))
+            mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), name='전자(e⁻)'))
         fig_band.add_trace(go.Scatter(x=np.random.uniform(3.4,4.6,10), y=E_V_Base-np.random.uniform(0.02,0.15,10),
-            mode='markers', marker=dict(color='#C62828',size=9,line=dict(color='#7B1818',width=1.5)), name='정공(h⁺)'))
+            mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), name='정공(h⁺)'))
         fig_band.add_trace(go.Scatter(x=np.random.uniform(5.8,7.8,12), y=E_C_Collector+np.random.uniform(0.02,0.15,12),
-            mode='markers', marker=dict(color='#1565C0',size=8,line=dict(color='#0D47A1',width=1.5)), showlegend=False))
+            mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), showlegend=False))
     else:
         fig_band.add_trace(go.Scatter(x=np.random.uniform(0.2,2.2,16), y=E_V_Emitter-np.random.uniform(0.02,0.15,16),
-            mode='markers', marker=dict(color='#C62828',size=9,line=dict(color='#7B1818',width=1.5)), name='정공(h⁺)'))
+            mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), name='정공(h⁺)'))
         fig_band.add_trace(go.Scatter(x=np.random.uniform(3.4,4.6,10), y=E_C_Base+np.random.uniform(0.02,0.15,10),
-            mode='markers', marker=dict(color='#1565C0',size=8,line=dict(color='#0D47A1',width=1.5)), name='전자(e⁻)'))
+            mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), name='전자(e⁻)'))
         fig_band.add_trace(go.Scatter(x=np.random.uniform(5.8,7.8,12), y=E_V_Collector-np.random.uniform(0.02,0.15,12),
-            mode='markers', marker=dict(color='#C62828',size=9,line=dict(color='#7B1818',width=1.5)), showlegend=False))
+            mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), showlegend=False))
 
-    fig_band.add_vline(x=2.8, line=dict(color='gray',width=1,dash='dot'))
-    fig_band.add_vline(x=5.2, line=dict(color='gray',width=1,dash='dot'))
+    fig_band.add_vline(x=2.8, line=dict(color='#94a3b8',width=1.5,dash='dot'))
+    fig_band.add_vline(x=5.2, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     fig_band.update_layout(
         xaxis=dict(visible=False, range=[-0.2,8.6]),
         yaxis=dict(visible=False, range=[min(ev_all)-0.35, max(ec_all)+0.8]),
-        height=300, margin=dict(l=5,r=10,t=5,b=5),
-        showlegend=True,
-        legend=dict(x=0.01,y=0.02,bgcolor='rgba(255,255,255,0.85)',bordercolor='lightgray',borderwidth=1,font=dict(size=9),orientation='h'),
-        plot_bgcolor='white'
+        height=320, margin=dict(l=0,r=10,t=10,b=0),
+        showlegend=False, plot_bgcolor='white'
     )
     st.plotly_chart(fig_band, use_container_width=True)
 
-# ── I_C–V_CE 특성 곡선
+# ── I_C–V_CE 특성 곡선 (오렌지 톤 적용)
 with col_iv:
-    st.markdown("<span style='font-size:0.85rem; font-weight:700; color:#334155;'>📈 I_C–V_CE 특성 곡선 & 직류 부하선</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-size:0.9rem; font-weight:800; color:#334155;'>📈 I_C - V_CE 특성 곡선 & 직류 부하선</span>", unsafe_allow_html=True)
     fig_iv = go.Figure()
     sign       = 1 if bjt_type=="NPN" else -1
     v_arr      = np.linspace(0, V_CC+0.8, 300)
     ib_list    = [10,20,30,40,50]
-    base_color = (255,127,14) if bjt_type=="NPN" else (148,103,189)
+    base_color = (249, 115, 22) if bjt_type=="NPN" else (168, 85, 247) # 오렌지 톤
 
     for idx, ib_uA in enumerate(ib_list):
         ib_A   = ib_uA*1e-6
         ic_sat = beta*ib_A*1000
-        alpha  = 0.35 + 0.14*idx
+        alpha  = 0.4 + 0.12*idx
         color  = f"rgba({base_color[0]},{base_color[1]},{base_color[2]},{alpha:.2f})"
         ic_curve = [max(0.0, ic_sat*np.tanh(v/0.12)*(1+early_k*v)) for v in v_arr]
         fig_iv.add_trace(go.Scatter(
             x=[sign*v for v in v_arr], y=[sign*ic for ic in ic_curve],
-            mode='lines', line=dict(color=color,width=2.0),
+            mode='lines', line=dict(color=color,width=2.5),
             name=f"I_B={ib_uA}μA", showlegend=True))
 
     sat_ic_mag = (V_CC/R_C)*1000
     fig_iv.add_trace(go.Scatter(
         x=[0.0, sign*V_CC], y=[sign*sat_ic_mag, 0.0],
-        mode='lines', line=dict(color='black',width=2.5), name='직류 부하선'))
-    fig_iv.add_vline(x=sign*0.2, line=dict(color='purple',width=1.2,dash='dot'))
+        mode='lines', line=dict(color='#0f172a',width=3), name='직류 부하선'))
+    fig_iv.add_vline(x=sign*0.2, line=dict(color='#ef4444',width=1.5,dash='dash'))
 
     q_x, q_y = sign*q_vce, sign*q_ic_mA
     fig_iv.add_trace(go.Scatter(
         x=[q_x], y=[q_y], mode='markers+text',
-        marker=dict(color='red',size=12,symbol='circle',line=dict(color='white',width=2)),
+        marker=dict(color='#ef4444',size=12,symbol='circle',line=dict(color='white',width=2)),
         text=[f"Q ({q_vce:.2f}V, {q_ic_mA:.2f}mA)"],
-        textposition="top right", textfont=dict(size=10,color='red'), name="Q점"))
-    fig_iv.add_shape(type='line', x0=q_x,x1=q_x, y0=0,y1=q_y, line=dict(color='red',width=1,dash='dash'))
-    fig_iv.add_shape(type='line', x0=0,x1=q_x,   y0=q_y,y1=q_y, line=dict(color='red',width=1,dash='dash'))
+        textposition="top left" if bjt_type=="NPN" else "bottom right", 
+        textfont=dict(size=11,color='#dc2626',weight='bold'), name="Q점"))
+    
+    fig_iv.add_shape(type='line', x0=q_x,x1=q_x, y0=0,y1=q_y, line=dict(color='#dc2626',width=1.5,dash='dot'))
+    fig_iv.add_shape(type='line', x0=0,x1=q_x,   y0=q_y,y1=q_y, line=dict(color='#dc2626',width=1.5,dash='dot'))
 
     # 포화점/차단점 라벨
-    fig_iv.add_annotation(x=sign*0.2, y=sign*sat_ic_mag, text="포화점", showarrow=False,
-                           xanchor='left', font=dict(size=9,color='purple'))
+    fig_iv.add_annotation(x=sign*0.2, y=sign*sat_ic_mag*0.5, text="V_CE,sat", textangle=-90, showarrow=False,
+                           xanchor='right', font=dict(size=10,color='#ef4444',weight='bold'))
     fig_iv.add_annotation(x=sign*V_CC, y=0, text="차단점", showarrow=False,
-                           xanchor='right', font=dict(size=9,color='purple'))
+                           xanchor='right', yanchor='bottom', font=dict(size=10,color='#0f172a',weight='bold'))
 
-    x_range = [-0.1, V_CC+1.2] if bjt_type=="NPN" else [-(V_CC+1.2), 0.1]
-    y_range = [-0.3, sat_ic_mag+1.2] if bjt_type=="NPN" else [-(sat_ic_mag+1.2), 0.3]
+    x_range = [-0.2, V_CC+1.2] if bjt_type=="NPN" else [-(V_CC+1.2), 0.2]
+    y_range = [-0.5, sat_ic_mag+1.5] if bjt_type=="NPN" else [-(sat_ic_mag+1.5), 0.5]
     fig_iv.update_layout(
         xaxis_title="V_CE [V]", yaxis_title="I_C [mA]",
-        xaxis=dict(range=x_range,showgrid=True,gridcolor='#EEEEEE',zeroline=True,zerolinecolor='black',zerolinewidth=1.5),
-        yaxis=dict(range=y_range,showgrid=True,gridcolor='#EEEEEE',zeroline=True,zerolinecolor='black',zerolinewidth=1.5),
-        height=300, margin=dict(l=5,r=10,t=5,b=5), showlegend=True,
-        legend=dict(x=0.6 if bjt_type=="NPN" else 0.01,
+        xaxis=dict(range=x_range,showgrid=True,gridcolor='#f1f5f9',zeroline=True,zerolinecolor='#475569',zerolinewidth=2),
+        yaxis=dict(range=y_range,showgrid=True,gridcolor='#f1f5f9',zeroline=True,zerolinecolor='#475569',zerolinewidth=2),
+        height=320, margin=dict(l=10,r=10,t=10,b=10), showlegend=True,
+        legend=dict(x=0.75 if bjt_type=="NPN" else 0.02,
                     y=0.98 if bjt_type=="NPN" else 0.15,
-                    bgcolor='rgba(255,255,255,0.85)',bordercolor='lightgray',borderwidth=1,font=dict(size=9)),
+                    bgcolor='rgba(255,255,255,0.9)',bordercolor='#cbd5e1',borderwidth=1,font=dict(size=10)),
         plot_bgcolor='white'
     )
     st.plotly_chart(fig_iv, use_container_width=True)
