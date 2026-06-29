@@ -4,7 +4,7 @@ import numpy as np
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 좌측 패널이 깨지는 원인이었던 공격적인 CSS를 제거하고, 꼭 필요한 최소한의 깔끔한 스타일만 남겼습니다.
+# 최소한의 깔끔한 스타일만 남긴 CSS
 st.markdown("""
 <style>
     /* 메인 대시보드 카드 스타일 */
@@ -17,8 +17,8 @@ st.markdown("""
         margin-bottom: 12px;
     }
     .stat-title { font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
-    .stat-value { font-size: 1.3rem; font-weight: 700; color: #2c3e50; }
     .stat-label { font-size: 0.75rem; color: #95a5a6; font-weight: 600; }
+    .stat-value { font-size: 1.3rem; font-weight: 700; color: #2c3e50; }
     
     /* 사이드바 라디오 버튼 디자인 개선 */
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 8px !important; }
@@ -77,18 +77,19 @@ early_k = 1.0 / V_AF
 be_fwd = V_be > 0
 bc_fwd = V_bc > 0
 
+# 스크린샷과 동일한 색상 및 텍스트 적용
 if be_fwd and not bc_fwd:
-    mode      = "순방향 활성 모드"
+    mode      = "순방향 활성 영역"
     mode_en   = "Forward Active"
-    mode_color = "#27ae60" # 녹색
+    mode_color = "#f39c12" # 노랑/주황색 (선형 영역 색상 차용)
 elif be_fwd and bc_fwd:
-    mode      = "포화 모드"
+    mode      = "포화 영역"
     mode_en   = "Saturation"
-    mode_color = "#8e44ad" # 보라색
+    mode_color = "#28a745" # 초록색
 else:
-    mode      = "차단 모드 (또는 역방향)"
-    mode_en   = "Cut-off / Reverse"
-    mode_color = "#e74c3c" # 빨간색
+    mode      = "차단 영역"
+    mode_en   = "Cutoff"
+    mode_color = "#dc3545" # 빨간색
 
 mode_full = f"{mode} ({mode_en})"
 
@@ -115,24 +116,24 @@ st.markdown("<hr style='margin:4px 0 15px 0;'>", unsafe_allow_html=True)
 stat_col, main_col = st.columns([0.3, 0.7])
 
 with stat_col:
-    # 좌측 상태 패널 UI 복구 및 개선
+    # 스크린샷과 완벽하게 일치하는 한 줄 텍스트 및 폰트 레이아웃 적용
     st.markdown(f"""
     <div class='stat-card'>
         <div class='stat-title'>Operating Region</div>
-        <div style='font-size:1.8rem; font-weight:800; color:{mode_color}; line-height:1.2;'>{mode}</div>
-        <div style='font-size:1.0rem; font-weight:600; color:{mode_color}; margin-bottom:16px;'>({mode_en})</div>
-        <hr style='margin:12px 0; border-color:#f1f2f6;'>
-        <div style='display:grid; grid-template-columns: 1fr 1fr; gap:16px;'>
+        <div style='font-size:1.8rem; font-weight:800; color:{mode_color}; margin-bottom:20px;'>
+            {mode} <span style='font-weight:600;'>({mode_en})</span>
+        </div>
+        <div style='display:grid; grid-template-columns: 1fr 1fr; gap:20px;'>
             <div>
-                <div class='stat-label'>V_CE</div>
+                <div class='stat-label'>인가전압 |V_CE|</div>
                 <div class='stat-value'>{V_be - V_bc:.2f} V</div>
             </div>
             <div>
-                <div class='stat-label'>I_C</div>
+                <div class='stat-label'>컬렉터전류 |I_C|</div>
                 <div class='stat-value'>{q_ic_mA:.2f} mA</div>
             </div>
             <div>
-                <div class='stat-label'>I_B</div>
+                <div class='stat-label'>베이스전류 |I_B|</div>
                 <div class='stat-value'>{I_B_A*1e6:.1f} μA</div>
             </div>
             <div>
@@ -169,45 +170,36 @@ with main_col:
     with tab1:
         fig_band = go.Figure()
 
-        # --- 물리적으로 정확한 에너지 밴드 계산 로직으로 전면 교체 ---
         E_g = 1.12
         x_all = np.linspace(0, 8.0, 400)
         ec_all = np.zeros_like(x_all)
         
-        # 밴드 크로싱을 막기 위해 유효 바이어스 전압을 빌트인 전위(약 0.8V) 이하로 제한
         v_be_eff = float(np.clip(V_be, -5.0, 0.75))
         v_bc_eff = float(np.clip(V_bc, -5.0, 0.75))
 
         if bjt_type == "NPN":
-            # 기준점: Base의 페르미 준위를 0 eV로 설정
             E_F_Base = 0.0
             E_V_Base = -0.1
             E_C_Base = E_V_Base + E_g
             
-            # 인가 전압에 의한 준페르미 준위 분리 (Quasi-Fermi Level Splitting)
             E_F_Emitter = E_F_Base + v_be_eff
             E_F_Collector = E_F_Base + v_bc_eff
             
-            # 도핑 농도를 반영한 전도대 위치 설정 (N+ 이미터, N 컬렉터)
             E_C_Emitter = E_F_Emitter - 0.05
             E_C_Collector = E_F_Collector - 0.15
         else: # PNP
-            # 기준점: Base의 페르미 준위를 0 eV로 설정
             E_F_Base = 0.0
             E_C_Base = 0.1
             E_V_Base = E_C_Base - E_g
             
-            # 인가 전압에 의한 준페르미 준위 분리
             E_F_Emitter = E_F_Base - v_be_eff
             E_F_Collector = E_F_Base - v_bc_eff
             
-            # 도핑 농도를 반영한 가전자대 위치 설정 (P+ 이미터, P 컬렉터)
             E_V_Emitter = E_F_Emitter + 0.05
             E_V_Collector = E_F_Collector + 0.15
             E_C_Emitter = E_V_Emitter + E_g
             E_C_Collector = E_V_Collector + E_g
 
-        # 공핍 영역(Depletion Region)의 스무스한 커브 생성 (수학적 보간 적용)
         for i, x in enumerate(x_all):
             if x <= 2.4:
                 ec_all[i] = E_C_Emitter
@@ -215,25 +207,22 @@ with main_col:
                 ec_all[i] = E_C_Collector
             elif 3.2 <= x <= 4.8:
                 ec_all[i] = E_C_Base
-            elif 2.4 < x < 3.2: # EB 공핍층
+            elif 2.4 < x < 3.2: 
                 t = (x - 2.4) / 0.8 * np.pi
                 ec_all[i] = E_C_Emitter + (E_C_Base - E_C_Emitter) * (1 - np.cos(t)) / 2
-            elif 4.8 < x < 5.6: # CB 공핍층
+            elif 4.8 < x < 5.6: 
                 t = (x - 4.8) / 0.8 * np.pi
                 ec_all[i] = E_C_Base + (E_C_Collector - E_C_Base) * (1 - np.cos(t)) / 2
                 
         ev_all = ec_all - E_g
 
-        # 영역별 배경색 시각화
         fig_band.add_vrect(x0=0,   x1=2.8, fillcolor="rgba(173,216,230,0.25)", line_width=0)
         fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor="rgba(255,182,193,0.25)", line_width=0)
         fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor="rgba(144,238,144,0.25)", line_width=0)
 
-        # 밴드 라인 그리기
         fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='black', width=2.5), name='E_c'))
         fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='black', width=2.5), name='E_v'))
 
-        # 인가 전압에 따라 분리된 영역별 페르미 준위 (파란 점선) 표시
         fig_band.add_trace(go.Scatter(x=[0, 2.4], y=[E_F_Emitter, E_F_Emitter], mode='lines', line=dict(color='blue', width=2, dash='dash'), name='E_F (Emitter)'))
         fig_band.add_trace(go.Scatter(x=[3.2, 4.8], y=[E_F_Base, E_F_Base], mode='lines', line=dict(color='blue', width=2, dash='dash'), name='E_F (Base)'))
         fig_band.add_trace(go.Scatter(x=[5.6, 8.0], y=[E_F_Collector, E_F_Collector], mode='lines', line=dict(color='blue', width=2, dash='dash'), name='E_F (Collector)'))
@@ -249,36 +238,28 @@ with main_col:
         fig_band.add_annotation(x=4.0, y=max(ec_all)+0.55, text=f"<b>{b_lbl}</b>", showarrow=False, font=dict(size=11, color='#B71C1C'))
         fig_band.add_annotation(x=6.6, y=max(ec_all)+0.55, text=f"<b>{c_lbl}</b>", showarrow=False, font=dict(size=11, color='#1B5E20'))
 
-        # 전하 운반자(전자, 정공)가 각 밴드 위에 정확히 물리적으로 안착하도록 수정
         np.random.seed(42)
         if bjt_type == "NPN":
-            # Emitter (전자) - Ec 위
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(0.2, 2.2, 16), y=E_C_Emitter + np.random.uniform(0.02, 0.15, 16),
                 mode='markers', marker=dict(color='#1565C0', size=9, line=dict(color='#0D47A1', width=1.5)), name='전자 (e⁻)'))
-            # Base (정공) - Ev 아래
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(3.4, 4.6, 10), y=E_V_Base - np.random.uniform(0.02, 0.15, 10),
                 mode='markers', marker=dict(color='#C62828', size=10, line=dict(color='#7B1818', width=1.5)), name='정공 (h⁺)'))
-            # Collector (전자) - Ec 위
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(5.8, 7.8, 12), y=E_C_Collector + np.random.uniform(0.02, 0.15, 12),
                 mode='markers', marker=dict(color='#1565C0', size=9, line=dict(color='#0D47A1', width=1.5)), showlegend=False))
         else:
-            # Emitter (정공) - Ev 아래
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(0.2, 2.2, 16), y=E_V_Emitter - np.random.uniform(0.02, 0.15, 16),
                 mode='markers', marker=dict(color='#C62828', size=10, line=dict(color='#7B1818', width=1.5)), name='정공 (h⁺)'))
-            # Base (전자) - Ec 위
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(3.4, 4.6, 10), y=E_C_Base + np.random.uniform(0.02, 0.15, 10),
                 mode='markers', marker=dict(color='#1565C0', size=9, line=dict(color='#0D47A1', width=1.5)), name='전자 (e⁻)'))
-            # Collector (정공) - Ev 아래
             fig_band.add_trace(go.Scatter(
                 x=np.random.uniform(5.8, 7.8, 12), y=E_V_Collector - np.random.uniform(0.02, 0.15, 12),
                 mode='markers', marker=dict(color='#C62828', size=10, line=dict(color='#7B1818', width=1.5)), showlegend=False))
 
-        # 동작 모드 해설 라벨
         if mode_en == "Forward Active":
             fig_band.add_annotation(x=2.8, y=max(E_C_Emitter, E_C_Base)+0.22, text="<b>↓BE 장벽 낮아짐</b>", showarrow=False, font=dict(color='#E65100', size=10))
             fig_band.add_annotation(x=4.0, y=max(ec_all)+0.85, text="순방향 활성: 캐리어 확산 및 표류 발생", showarrow=False, font=dict(color='#FF6F00', size=11))
@@ -287,7 +268,6 @@ with main_col:
         else:
             fig_band.add_annotation(x=4.0, y=max(ec_all)+0.85, text="⛔ 차단: 장벽에 막혀 전류 흐르지 못함 (스위치 OFF)", showarrow=False, font=dict(color='gray', size=11))
 
-        # 접합 경계선
         fig_band.add_vline(x=2.8, line=dict(color='gray', width=1, dash='dot'))
         fig_band.add_vline(x=5.2, line=dict(color='gray', width=1, dash='dot'))
 
