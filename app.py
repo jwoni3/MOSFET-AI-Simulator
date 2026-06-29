@@ -7,12 +7,14 @@ st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
 st.markdown("""
 <style>
-    [data-testid="stSidebar"] { min-width: 250px; max-width: 250px; }
+    /* 사이드바 고정 너비 제거 → 접기/펼치기 정상 동작 */
+    /* [data-testid="stSidebar"] { min-width: 250px; max-width: 250px; } ← 삭제 */
+
     [data-testid="stSidebar"] .element-container,
     [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p { margin-bottom: 0.2rem !important; }
     [data-testid="stSidebar"] h3 { font-size: 0.95rem !important; margin-bottom: 5px !important; margin-top: 5px !important; }
     [data-testid="stSidebar"] hr { margin: 6px 0 !important; }
-    [data-testid="stSidebar"] .stSlider { margin-top: -15px !important; margin-bottom: -5px !important; }
+    [data-testid="stSidebar"] .stSlider { margin-top: 0px !important; margin-bottom: -5px !important; }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"],
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] { background-color: #ffffff !important; }
     [data-testid="stSidebar"] .stNumberInput input {
@@ -21,6 +23,12 @@ st.markdown("""
     }
     [data-testid="stSidebar"] .stTextArea textarea { font-size: 0.78rem !important; padding: 5px !important; color: #2c3e50 !important; }
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
+
+    /* 슬라이더 현재값 툴팁(빨간 숫자) 숨기기 → 라벨 겹침 방지 */
+    [data-testid="stSidebar"] [data-testid="stSlider"] [data-baseweb="tooltip"],
+    [data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stThumbValue"] {
+        display: none !important;
+    }
 
     /* 통일된 카드 스타일 */
     .stat-card {
@@ -31,17 +39,13 @@ st.markdown("""
     .stat-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
 
-    /* 커스텀 헤더 스타일 (스크린샷 매칭) */
     .section-header {
         font-size: 1.25rem; font-weight: 800; color: #334155; 
         margin-top: 0px; margin-bottom: 12px;
         display: flex; align-items: center; gap: 8px;
     }
 
-    /* 전체 페이지 상단 여백 확보 및 제목 위아래 정렬 최적화 */
     .block-container { padding-top: 2.5rem !important; padding-bottom: 1rem !important; }
-    
-    /* Plotly 여백 최적화 */
     .stPlotlyChart { margin-bottom: 15px !important; }
 </style>
 """, unsafe_allow_html=True)
