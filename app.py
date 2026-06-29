@@ -4,6 +4,7 @@ import numpy as np
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
+# 좌측 패널(stat_col) 및 전체적인 UI 컬러톤 개선
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -98,15 +99,15 @@ bc_fwd = V_bc > 0
 if be_fwd and not bc_fwd:
     mode      = "순방향 활성 모드"
     mode_en   = "Forward Active"
-    mode_color = "#27ae60"
+    mode_color = "#27ae60" # 녹색
 elif be_fwd and bc_fwd:
     mode      = "포화 모드"
     mode_en   = "Saturation"
-    mode_color = "#8e44ad"
+    mode_color = "#8e44ad" # 보라색
 else:
     mode      = "차단 모드"
     mode_en   = "Cut-off"
-    mode_color = "#e74c3c"
+    mode_color = "#e74c3c" # 빨간색
 
 mode_full = f"{mode} ({mode_en})"
 
@@ -133,28 +134,29 @@ st.markdown("<hr style='margin:4px 0 10px 0'>", unsafe_allow_html=True)
 stat_col, main_col = st.columns([0.32, 0.68])
 
 with stat_col:
+    # 좌측 패널 디자인 개선 (더 깔끔하고 모던한 카드 형태)
     st.markdown(f"""
-    <div style='background:#f8f9fa; border-radius:12px; padding:16px 18px; border:1px solid #e0e0e0; margin-bottom:12px'>
-        <div style='font-size:0.78rem; color:#888; margin-bottom:4px'>Operating Region</div>
-        <div style='font-size:1.7rem; font-weight:800; color:{mode_color}; line-height:1.2'>{mode}</div>
-        <div style='font-size:1.0rem; font-weight:600; color:{mode_color}; margin-bottom:12px'>({mode_en})</div>
-        <hr style='margin:8px 0; border-color:#e0e0e0'>
-        <div style='display:flex; gap:16px; flex-wrap:wrap'>
+    <div style='background:#ffffff; border-radius:12px; padding:20px; border:1px solid #eaeaea; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.04); margin-bottom:12px'>
+        <div style='font-size:0.85rem; color:#7f8c8d; font-weight:600; margin-bottom:4px; text-transform:uppercase;'>Operating Region</div>
+        <div style='font-size:1.8rem; font-weight:800; color:{mode_color}; line-height:1.2'>{mode}</div>
+        <div style='font-size:1.0rem; font-weight:600; color:{mode_color}; margin-bottom:16px'>({mode_en})</div>
+        <hr style='margin:12px 0; border-color:#f1f2f6'>
+        <div style='display:grid; grid-template-columns: 1fr 1fr; gap:16px;'>
             <div>
-                <div style='font-size:0.72rem; color:#888'>V_CE</div>
-                <div style='font-size:1.25rem; font-weight:700; color:#222'>{V_be - V_bc:.2f} V</div>
+                <div style='font-size:0.75rem; color:#95a5a6; font-weight:600'>V_CE</div>
+                <div style='font-size:1.3rem; font-weight:700; color:#2c3e50'>{V_be - V_bc:.2f} V</div>
             </div>
             <div>
-                <div style='font-size:0.72rem; color:#888'>I_C</div>
-                <div style='font-size:1.25rem; font-weight:700; color:#222'>{q_ic_mA:.2f} mA</div>
+                <div style='font-size:0.75rem; color:#95a5a6; font-weight:600'>I_C</div>
+                <div style='font-size:1.3rem; font-weight:700; color:#2c3e50'>{q_ic_mA:.2f} mA</div>
             </div>
             <div>
-                <div style='font-size:0.72rem; color:#888'>I_B</div>
-                <div style='font-size:1.25rem; font-weight:700; color:#222'>{I_B_A*1e6:.1f} μA</div>
+                <div style='font-size:0.75rem; color:#95a5a6; font-weight:600'>I_B</div>
+                <div style='font-size:1.3rem; font-weight:700; color:#2c3e50'>{I_B_A*1e6:.1f} μA</div>
             </div>
             <div>
-                <div style='font-size:0.72rem; color:#888'>Q점 V_CEQ</div>
-                <div style='font-size:1.25rem; font-weight:700; color:#222'>{q_vce:.2f} V</div>
+                <div style='font-size:0.75rem; color:#95a5a6; font-weight:600'>Q점 V_CEQ</div>
+                <div style='font-size:1.3rem; font-weight:700; color:#2c3e50'>{q_vce:.2f} V</div>
             </div>
         </div>
     </div>
@@ -186,146 +188,129 @@ with main_col:
     with tab1:
         fig_band = go.Figure()
 
-        E_g    = 1.12
-        phi_bi = 0.7
+        E_g = 1.12
+        
+        # X축 정의 (연속적인 밴드 계산용)
+        x_all = np.linspace(0, 8.0, 300)
+        ec_all = np.zeros_like(x_all)
+        
+        # 영역 경계 (공핍 영역 정의로 물리적 정확도 상승)
+        x_be_l, x_be_r = 2.4, 3.2  # BE 접합 공핍층
+        x_bc_l, x_bc_r = 4.8, 5.6  # BC 접합 공핍층
 
-        x_e = np.linspace(0,   2.8, 60)
-        x_b = np.linspace(2.8, 5.2, 50)
-        x_c = np.linspace(5.2, 8.0, 60)
-        x_all = np.concatenate([x_e, x_b, x_c])
+        v_be_c = float(np.clip(V_be, -1.0, 0.75))
+        v_bc_c = float(np.clip(V_bc, -4.0, 0.75))
 
-        E_c_E_eq = 2.3
-        E_c_B_eq = 1.5
-        E_c_C_eq = 1.9
-        E_F_eq   = E_c_B_eq - E_g + 0.2
+        # 에너지 레벨 물리적 계산 (임의의 피크를 제거하고 플랫 밴드 + 공핍층 곡선 사용)
+        if bjt_type == "NPN":
+            E_c_E = 1.0
+            E_c_B = E_c_E + max(0.05, 0.8 - v_be_c)
+            E_c_C = E_c_B - max(0.05, 0.7 - v_bc_c)
+            
+            E_F_E_val = E_c_E - 0.1
+            E_F_B_val = E_c_B - E_g + 0.2
+            E_F_C_val = E_c_C - 0.1
+        else: # PNP
+            E_c_E = 3.0
+            E_c_B = E_c_E - max(0.05, 0.8 - v_be_c)
+            E_c_C = E_c_B + max(0.05, 0.7 - v_bc_c)
+            
+            E_F_E_val = E_c_E - E_g + 0.1
+            E_F_B_val = E_c_B - 0.2
+            E_F_C_val = E_c_C - E_g + 0.1
 
-        v_be_c = float(np.clip(V_be, -1.0, 0.7))
-        v_bc_c = float(np.clip(V_bc, -4.0, 0.7))
-
-        E_c_E = E_c_E_eq
-        E_c_B = E_c_B_eq + v_be_c * 0.70
-        E_c_C = E_c_C_eq - v_bc_c * 0.60
-
-        be_barrier = max(0.0, phi_bi - v_be_c)
-        bc_barrier = max(0.0, phi_bi - v_bc_c)
-        be_peak_h  = min(be_barrier * 0.18, 0.25)
-        bc_peak_h  = min(bc_barrier * 0.18, 0.35)
-
-        ec_e = np.full_like(x_e, E_c_E)
-
-        n_b    = len(x_b)
-        half_b = n_b // 2
-        peak_BE = max(E_c_E, E_c_B) + be_peak_h
-        t_l  = np.linspace(0, np.pi, half_b)
-        t_r  = np.linspace(0, np.pi, n_b - half_b)
-        ec_b = np.concatenate([
-            E_c_E + (peak_BE - E_c_E) * (1 - np.cos(t_l)) / 2,
-            peak_BE + (E_c_B - peak_BE) * (1 - np.cos(t_r)) / 2
-        ])
-
-        n_c    = len(x_c)
-        half_c = n_c // 2
-        peak_BC = max(E_c_B, E_c_C) + bc_peak_h
-        t_l2 = np.linspace(0, np.pi, half_c)
-        t_r2 = np.linspace(0, np.pi, n_c - half_c)
-        ec_c = np.concatenate([
-            E_c_B + (peak_BC - E_c_B) * (1 - np.cos(t_l2)) / 2,
-            peak_BC + (E_c_C - peak_BC) * (1 - np.cos(t_r2)) / 2
-        ])
-
-        ec_all = np.concatenate([ec_e, ec_b, ec_c])
+        # 밴드 커브 생성 (중립 영역은 평탄하게, 공핍 영역은 부드럽게 휨)
+        for i, x in enumerate(x_all):
+            if x <= x_be_l:
+                ec_all[i] = E_c_E
+            elif x >= x_bc_r:
+                ec_all[i] = E_c_C
+            elif x >= x_be_r and x <= x_bc_l:
+                ec_all[i] = E_c_B
+            elif x > x_be_l and x < x_be_r:
+                t = (x - x_be_l) / (x_be_r - x_be_l) * np.pi
+                ec_all[i] = E_c_E + (E_c_B - E_c_E) * (1 - np.cos(t)) / 2
+            elif x > x_bc_l and x < x_bc_r:
+                t = (x - x_bc_l) / (x_bc_r - x_bc_l) * np.pi
+                ec_all[i] = E_c_B + (E_c_C - E_c_B) * (1 - np.cos(t)) / 2
+                
         ev_all = ec_all - E_g
-        ev_c   = ec_c - E_g
 
-        E_F_B_base = E_c_B - E_g + 0.18
-
-        if mode_en == "Cut-off":
-            E_F_E_val = E_F_eq
-            E_F_B_val = E_F_eq
-            E_F_C_val = E_F_eq
-        else:
-            E_F_E_val = E_F_B_base + v_be_c * 0.75
-            E_F_B_val = E_F_B_base
-            E_F_C_val = E_F_B_base + v_bc_c * 0.60
-
+        # 영역 배경색
         fig_band.add_vrect(x0=0,   x1=2.8, fillcolor="rgba(173,216,230,0.25)", line_width=0)
         fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor="rgba(255,182,193,0.25)", line_width=0)
         fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor="rgba(144,238,144,0.25)", line_width=0)
 
+        # 밴드 그리기
         fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines',
                                        line=dict(color='black', width=2.5), name='E_c'))
         fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines',
                                        line=dict(color='black', width=2.5), name='E_v'))
 
-        for xarr, earr, show in [
-            (x_e, np.full_like(x_e, E_F_E_val), True),
-            (x_b, np.full_like(x_b, E_F_B_val), False),
-            (x_c, np.full_like(x_c, E_F_C_val), False)
-        ]:
-            fig_band.add_trace(go.Scatter(
-                x=xarr, y=earr, mode='lines',
-                line=dict(color='blue', width=2, dash='dash'),
-                name='E_F (준페르미)' if show else None, showlegend=show))
+        # 준페르미 준위 (중성 영역에서만 표시하여 물리적 의미 강화)
+        fig_band.add_trace(go.Scatter(x=[0, x_be_l], y=[E_F_E_val, E_F_E_val], mode='lines',
+                                      line=dict(color='blue', width=2, dash='dash'), name='E_F (Emitter)'))
+        fig_band.add_trace(go.Scatter(x=[x_be_r, x_bc_l], y=[E_F_B_val, E_F_B_val], mode='lines',
+                                      line=dict(color='blue', width=2, dash='dash'), name='E_F (Base)'))
+        fig_band.add_trace(go.Scatter(x=[x_bc_r, 8.0], y=[E_F_C_val, E_F_C_val], mode='lines',
+                                      line=dict(color='blue', width=2, dash='dash'), name='E_F (Collector)'))
 
-        fig_band.add_annotation(x=8.15, y=ec_c[-1]+0.05, text="<b>E_C</b>",
+        # 텍스트 라벨
+        fig_band.add_annotation(x=8.15, y=ec_all[-1]+0.05, text="<b>E_C</b>",
                                  showarrow=False, font=dict(size=12, color='black'))
-        fig_band.add_annotation(x=8.15, y=ev_c[-1]-0.05, text="<b>E_V</b>",
+        fig_band.add_annotation(x=8.15, y=ev_all[-1]-0.05, text="<b>E_V</b>",
                                  showarrow=False, font=dict(size=12, color='black'))
-
-        for x_pos, ef_val in [(1.4, E_F_E_val), (4.0, E_F_B_val), (6.6, E_F_C_val)]:
-            fig_band.add_annotation(x=x_pos, y=ef_val+0.12, text="<b>E_F</b>",
-                                     showarrow=False, font=dict(size=10, color='blue'))
 
         e_lbl = "EMITTER (N⁺)" if bjt_type=="NPN" else "EMITTER (P⁺)"
         b_lbl = "BASE (P)"     if bjt_type=="NPN" else "BASE (N)"
         c_lbl = "COLLECTOR (N)"if bjt_type=="NPN" else "COLLECTOR (P)"
 
-        fig_band.add_annotation(x=1.4, y=ec_e[0]+0.55, text=f"<b>{e_lbl}</b>",
+        fig_band.add_annotation(x=1.4, y=ec_all[0]+0.55, text=f"<b>{e_lbl}</b>",
                                  showarrow=False, font=dict(size=11, color='#1565C0'))
         fig_band.add_annotation(x=4.0, y=E_c_B+0.55, text=f"<b>{b_lbl}</b>",
                                  showarrow=False, font=dict(size=11, color='#B71C1C'))
-        fig_band.add_annotation(x=6.6, y=ec_c[-1]+0.55, text=f"<b>{c_lbl}</b>",
+        fig_band.add_annotation(x=6.6, y=ec_all[-1]+0.55, text=f"<b>{c_lbl}</b>",
                                  showarrow=False, font=dict(size=11, color='#1B5E20'))
 
+        # 입자(전자/정공) 표시 시각화
         np.random.seed(7)
         if bjt_type == "NPN":
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(0.2, 2.6, 16),
-                y=ec_e[0] + np.random.uniform(0.05, 0.22, 16),
+                x=np.random.uniform(0.2, 2.3, 16),
+                y=ec_all[0] + np.random.uniform(0.05, 0.22, 16),
                 mode='markers', marker=dict(color='#1565C0', size=9,
                 line=dict(color='#0D47A1', width=1.5)), name='전자 (e⁻)'))
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(3.0, 5.0, 10),
+                x=np.random.uniform(3.3, 4.7, 10),
                 y=(E_c_B - E_g) + np.random.uniform(0.02, 0.18, 10),
                 mode='markers', marker=dict(color='#C62828', size=10,
                 line=dict(color='#7B1818', width=1.5)), name='정공 (h⁺)'))
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(5.4, 7.8, 12),
-                y=ec_c[-1] + np.random.uniform(0.05, 0.22, 12),
+                x=np.random.uniform(5.7, 7.8, 12),
+                y=ec_all[-1] + np.random.uniform(0.05, 0.22, 12),
                 mode='markers', marker=dict(color='#1565C0', size=9,
                 line=dict(color='#0D47A1', width=1.5)), showlegend=False))
         else:
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(0.2, 2.6, 16),
-                y=(ec_e[0] - E_g) + np.random.uniform(0.02, 0.18, 16),
+                x=np.random.uniform(0.2, 2.3, 16),
+                y=(ec_all[0] - E_g) + np.random.uniform(0.02, 0.18, 16),
                 mode='markers', marker=dict(color='#C62828', size=10,
                 line=dict(color='#7B1818', width=1.5)), name='정공 (h⁺)'))
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(3.0, 5.0, 10),
+                x=np.random.uniform(3.3, 4.7, 10),
                 y=E_c_B + np.random.uniform(0.05, 0.22, 10),
                 mode='markers', marker=dict(color='#1565C0', size=9,
                 line=dict(color='#0D47A1', width=1.5)), name='전자 (e⁻)'))
             fig_band.add_trace(go.Scatter(
-                x=np.random.uniform(5.4, 7.8, 12),
-                y=(ec_c[-1] - E_g) + np.random.uniform(0.02, 0.18, 12),
+                x=np.random.uniform(5.7, 7.8, 12),
+                y=(ec_all[-1] - E_g) + np.random.uniform(0.02, 0.18, 12),
                 mode='markers', marker=dict(color='#C62828', size=10,
                 line=dict(color='#7B1818', width=1.5)), showlegend=False))
 
+        # 모드별 상태 텍스트
         if mode_en == "Forward Active":
-            fig_band.add_annotation(x=2.8, y=peak_BE+0.22, text="<b>↓BE 장벽</b>",
+            fig_band.add_annotation(x=2.8, y=max(E_c_E, E_c_B)+0.22, text="<b>↓BE 장벽</b>",
                                      showarrow=False, font=dict(color='#E65100', size=10))
-            fig_band.add_annotation(x=5.2, y=peak_BC+0.22, text="<b>↑BC 장벽</b>",
-                                     showarrow=False, font=dict(color='#1A237E', size=10))
             fig_band.add_annotation(x=4.0, y=E_c_B+0.85, text="① 확산 → ② 표류 → 컬렉터",
                                      showarrow=False, font=dict(color='#FF6F00', size=10))
         elif mode_en == "Saturation":
@@ -335,16 +320,17 @@ with main_col:
             fig_band.add_annotation(x=4.0, y=E_c_B+0.85, text="⛔ 양쪽 장벽↑ → 개방 스위치",
                                      showarrow=False, font=dict(color='gray', size=10))
 
+        # 물리적 접합 경계선
         fig_band.add_vline(x=2.8, line=dict(color='gray', width=1, dash='dot'))
         fig_band.add_vline(x=5.2, line=dict(color='gray', width=1, dash='dot'))
 
-        y_bot = min(ev_all.min(), E_F_C_val, E_F_E_val) - 0.4
-        y_top = max(ec_all.max(), E_F_E_val) + 0.8
+        y_bot = min(ev_all) - 0.4
+        y_top = max(ec_all) + 0.8
 
         fig_band.update_layout(
             xaxis=dict(visible=False, range=[-0.2, 8.6]),
             yaxis=dict(visible=False, range=[y_bot, y_top]),
-            height=360, margin=dict(l=10, r=10, t=20, b=10),
+            height=380, margin=dict(l=10, r=10, t=20, b=10),
             showlegend=True,
             legend=dict(x=0.01, y=0.02, bgcolor='rgba(255,255,255,0.85)',
                         bordercolor='lightgray', borderwidth=1,
@@ -425,7 +411,7 @@ with main_col:
                        zeroline=True, zerolinecolor='black', zerolinewidth=1.5),
             yaxis=dict(range=y_range, showgrid=True, gridcolor='#EEEEEE',
                        zeroline=True, zerolinecolor='black', zerolinewidth=1.5),
-            height=360, margin=dict(l=10, r=10, t=20, b=10),
+            height=380, margin=dict(l=10, r=10, t=20, b=10),
             showlegend=True,
             legend=dict(x=0.55 if bjt_type=="NPN" else 0.01,
                         y=0.98 if bjt_type=="NPN" else 0.15,
