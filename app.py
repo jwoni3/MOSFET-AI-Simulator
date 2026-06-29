@@ -57,7 +57,7 @@ if "GEMINI_API_KEY" in st.secrets:
 # ── 사이드바
 with st.sidebar:
     st.markdown("### 🔬 제어 및 입력 패널")
-    bjt_type = st.radio("소자 타입 선택", ["NPN", "PNP"], horizontal=True)
+    bjt_type = st.selectbox("소자 타입 선택", ["NPN", "PNP"])
     st.markdown("---")
     st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
 
