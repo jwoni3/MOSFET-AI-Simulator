@@ -228,7 +228,7 @@ bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 
 st.markdown(f"""
 <h1 style='text-align:left; font-size:2.2rem; font-weight:900; color:#1e293b; margin-top:0; padding-bottom:12px; border-bottom:1px solid #e2e8f0; margin-bottom: 24px;'>
-    🔌 {bjt_type} BJT SIMULATOR
+    🔬 {bjt_type} BJT SIMULATOR
 </h1>
 """, unsafe_allow_html=True)
 
