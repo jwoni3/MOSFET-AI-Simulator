@@ -264,7 +264,7 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 
 # ════════════════════════════════════════════════
-# 레이아웃: 메인 타이틀 & 3단 컬럼 배치
+# 레이아웃: 메인 타이틀 & 3단 컬럼 배치 (스크린샷 매칭)
 # ════════════════════════════════════════════════
 
 st.markdown(f"""
@@ -425,7 +425,7 @@ with col1:
 
 # ── 2열: 그래프 모음 (I-V & 밴드)
 with col2:
-    st.markdown("<div class='section-header'>📈 특성 곡선 & 에너지 밴드 다이어그램</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>📈 특성 곡선 & 밴드 다이어그램</div>", unsafe_allow_html=True)
     
     # ── I_C–V_CE 특성 곡선
     fig_iv = go.Figure()
@@ -471,7 +471,7 @@ with col2:
     )
     st.plotly_chart(fig_iv, use_container_width=True)
 
-    # ── 에너지 밴드 다이어그램
+    # ── 에너지 밴드 다이어그램 (물리적 오류 완전 수정)
     fig_band = go.Figure()
     E_g = 1.12
     x_all = np.linspace(0, 8.0, 400)
@@ -577,13 +577,5 @@ with col3:
         else:
             st.error("GEMINI_API_KEY가 설정되지 않았습니다.")
     else:
-        # [수정] 원본 캡처 이미지와 완벽하게 동일한 배경색, 글자색 및 정렬 스타일 적용
-        st.markdown(f"""
-        <div style='background-color: #eef5fb; padding: 16px 18px; border-radius: 6px;
-                    font-size: 0.95rem; color: #165d9d; display: flex; align-items: flex-start; gap: 8px;'>
-            <div style='font-size: 1.1rem; margin-top: -2px;'>👈</div>
-            <div style='line-height: 1.6; font-weight: 500; letter-spacing: -0.2px;'>
-                왼쪽 패널에서 설정을 마치고 [AI 실시간<br>해설 보기] 버튼을 눌러보세요.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # [수정 완료] MOSFET 코드에서 사용하신 원본 st.info() 함수 그대로 적용!
+        st.info("👉 왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 보기] 버튼을 눌러보세요.")
