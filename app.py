@@ -1,10 +1,11 @@
 import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
+import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일
+# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일 CSS
 st.markdown("""
 <style>
     /* 사이드바 내부 요소 촘촘하게 줄여서 스크롤 없애기 */
@@ -41,7 +42,7 @@ st.markdown("""
         padding: 1px 4px !important;
         font-size: 0.75rem !important;
         color: #2c3e50 !important;
-        background-color: #ffffff !important; /* 텍스트 입력 부분도 흰색으로 */
+        background-color: #ffffff !important;
     }
     
     /* 텍스트 영역 높이 조절 */
@@ -119,18 +120,27 @@ early_k = 1.0 / V_AF
 be_fwd = V_be > 0
 bc_fwd = V_bc > 0
 
+# 애니메이션 로직을 위한 모드 확장 (Reverse Active 포함)
 if be_fwd and not bc_fwd:
-    mode      = "순방향 활성 영역"
-    mode_en   = "Forward Active"
+    mode       = "순방향 활성 영역"
+    mode_en    = "Forward Active"
     mode_color = "#f39c12" 
+    anim_key   = "forward_active"
 elif be_fwd and bc_fwd:
-    mode      = "포화 영역"
-    mode_en   = "Saturation"
+    mode       = "포화 영역"
+    mode_en    = "Saturation"
     mode_color = "#28a745" 
+    anim_key   = "saturation"
+elif not be_fwd and bc_fwd:
+    mode       = "역방향 활성 영역"
+    mode_en    = "Reverse Active"
+    mode_color = "#9b59b6" 
+    anim_key   = "reverse_active"
 else:
-    mode      = "차단 영역"
-    mode_en   = "Cutoff"
+    mode       = "차단 영역"
+    mode_en    = "Cutoff"
     mode_color = "#dc3545" 
+    anim_key   = "cutoff"
 
 mode_full = f"{mode} ({mode_en})"
 
@@ -154,7 +164,7 @@ q_ic_mA = q_ic_A * 1000
 st.markdown(f"<h3 style='margin-bottom:2px; margin-top:0px;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
 st.markdown("<hr style='margin:2px 0 10px 0;'>", unsafe_allow_html=True)
 
-# 상단 대시보드 레이아웃: 좌측(동작 모드 소자 상태) / 우측(AI 실시간 해설 단독 배치)
+# 상단 대시보드 레이아웃
 top_col1, top_col2 = st.columns([0.45, 0.55])
 
 with top_col1:
@@ -167,7 +177,7 @@ with top_col1:
         <div style='display:grid; grid-template-columns: 1fr 1fr; gap:12px;'>
             <div>
                 <div class='stat-label'>인가전압 |V_CE|</div>
-                <div class='stat-value'>{V_be - V_bc:.2f} V</div>
+                <div class='stat-value'>{abs(V_be - V_bc):.2f} V</div>
             </div>
             <div>
                 <div class='stat-label'>컬렉터전류 |I_C|</div>
@@ -218,8 +228,8 @@ with top_col2:
 
 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 
-# 하단 레이아웃 배치: 시각 분석 그래프를 하단으로 와이드하게 전개
-tab1, tab2 = st.tabs(["🔋 에너지 밴드 다이어그램", "📈 I_C–V_CE 특성 곡선"])
+# 하단 레이아웃 배치 (애니메이션 탭 추가)
+tab1, tab2, tab3 = st.tabs(["🔋 에너지 밴드 다이어그램", "📈 I_C–V_CE 특성 곡선", "🏃 캐리어 거동 애니메이션"])
 
 with tab1:
     fig_band = go.Figure()
@@ -376,3 +386,91 @@ with tab2:
         plot_bgcolor='white'
     )
     st.plotly_chart(fig_iv, use_container_width=True)
+
+with tab3:
+    # 동작 모드별 속도/방향/확산도 정의
+    carrier_color = "#00E6FF" if bjt_type == "NPN" else "#FF7043"
+    carrier_label = "전자 (Electron)" if bjt_type == "NPN" else "정공 (Hole)"
+
+    anim_params = {
+        "cutoff":         {"speed": 0, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 0.0},
+        "forward_active": {"speed": 4, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 0.2},
+        "saturation":     {"speed": 1, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 1.5},
+        "reverse_active": {"speed": 3, "dir": -1 if bjt_type=="NPN" else  1, "scatter": 0.5},
+    }
+    ap = anim_params[anim_key]
+
+    # HTML5 Canvas 및 내부 JavaScript 렌더링 엔진 통합
+    canvas_html = f"""
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 20px;">
+        <canvas id="bjtCanvas" width="520" height="160"
+                style="background:#2d2d2d; border-radius:8px; display:block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);"></canvas>
+        <p style="color:#888; font-size:0.85em; margin:10px 0 0 0; font-family: sans-serif;">
+            다수 캐리어 흐름 관측: <span style="color:{carrier_color}; font-weight: bold;">● {carrier_label}</span>
+        </p>
+    </div>
+    <script>
+    (function() {{
+        const canvas = document.getElementById('bjtCanvas');
+        const ctx    = canvas.getContext('2d');
+        const SPEED   = {ap['speed']};
+        const DIR     = {ap['dir']};
+        const SCATTER = {ap['scatter']};
+        const COLOR   = '{carrier_color}';
+        const MODE    = '{anim_key}';
+
+        const N = 40;
+        let particles = Array.from({{length: N}}, () => ({{
+            x: Math.random() * canvas.width,
+            y: 50 + Math.random() * 60,
+            r: 4
+        }}));
+
+        function draw() {{
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            [160, 360].forEach(x => {{
+                ctx.strokeStyle = '#777'; ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+                ctx.setLineDash([]);
+            }});
+            
+            ctx.fillStyle = '#aaa'; ctx.font = '13px monospace';
+            const labels = {{'NPN': ['Emitter (N+)', 'Base (P)',  'Collector (N)'],
+                             'PNP': ['Emitter (P+)', 'Base (N)', 'Collector (P)']}}['{bjt_type}'];
+            ctx.fillText(labels[0],  20, 22);
+            ctx.fillText(labels[1], 195, 22);
+            ctx.fillText(labels[2], 380, 22);
+            
+            if (MODE === 'reverse_active') {{
+                ctx.fillStyle = '#BB86FC'; ctx.font = '12px sans-serif';
+                ctx.fillText('역방향 활성: Emitter와 Collector 역할이 역전됨', 125, canvas.height - 12);
+            }}
+            if (MODE === 'cutoff') {{
+                ctx.fillStyle = '#E74C3C'; ctx.font = '13px sans-serif';
+                ctx.fillText('차단 (Cutoff): 장벽에 막혀 캐리어 이동 없음', 135, canvas.height - 12);
+            }}
+            
+            ctx.shadowBlur = 6; ctx.shadowColor = COLOR;
+            particles.forEach(p => {{
+                ctx.fillStyle = COLOR;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+                
+                if (SPEED > 0) {{
+                    p.x += DIR * SPEED + (Math.random() - 0.5) * SCATTER;
+                    p.y += (Math.random() - 0.5) * SCATTER * 0.5;
+                    p.y  = Math.max(40, Math.min(canvas.height - 20, p.y));
+                    if (DIR > 0 && p.x > canvas.width) p.x = 0;
+                    if (DIR < 0 && p.x < 0)            p.x = canvas.width;
+                }}
+            }});
+            ctx.shadowBlur = 0;
+            requestAnimationFrame(draw);
+        }}
+        draw();
+    }})();
+    </script>
+    """
+
+    components.html(canvas_html, height=240)
