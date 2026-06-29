@@ -7,30 +7,58 @@ st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
 st.markdown("""
 <style>
-    /* 사이드바 고정 너비 제거 → 접기/펼치기 정상 동작 */
-    /* [data-testid="stSidebar"] { min-width: 250px; max-width: 250px; } ← 삭제 */
-
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 0rem !important;
+    }
     [data-testid="stSidebar"] .element-container,
-    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p { margin-bottom: 0.2rem !important; }
-    [data-testid="stSidebar"] h3 { font-size: 0.95rem !important; margin-bottom: 5px !important; margin-top: 5px !important; }
+    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p {
+        margin-bottom: 0px !important;
+        margin-top: 0px !important;
+    }
+    [data-testid="stSidebar"] h3 {
+        font-size: 0.95rem !important;
+        margin-bottom: 5px !important;
+        margin-top: 5px !important;
+    }
+    [data-testid="stSidebarNav"] { display: none !important; }
     [data-testid="stSidebar"] hr { margin: 6px 0 !important; }
-    [data-testid="stSidebar"] .stSlider { margin-top: 0px !important; margin-bottom: -5px !important; }
+    [data-testid="stSidebar"] .stSlider {
+        margin-top: 0px !important;
+        padding-bottom: 0px !important;
+        margin-bottom: -10px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSliderThumbValue"] {
+        top: -30px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSliderTickBar"] {
+        margin-top: -20px !important;
+    }
+    [data-testid="stSidebar"] .stSelectbox {
+        margin-top: -4px !important;
+        margin-bottom: -4px !important;
+    }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"],
-    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] { background-color: #ffffff !important; }
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] {
+        background-color: #ffffff !important;
+    }
     [data-testid="stSidebar"] .stNumberInput input {
-        height: 26px !important; padding: 1px 4px !important;
-        font-size: 0.75rem !important; color: #2c3e50 !important; background-color: #ffffff !important;
+        height: 26px !important;
+        padding: 1px 4px !important;
+        font-size: 0.75rem !important;
+        color: #2c3e50 !important;
+        background-color: #ffffff !important;
     }
-    [data-testid="stSidebar"] .stTextArea textarea { font-size: 0.78rem !important; padding: 5px !important; color: #2c3e50 !important; }
-    div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
-
-    /* 슬라이더 현재값 툴팁(빨간 숫자) 숨기기 → 라벨 겹침 방지 */
-    [data-testid="stSidebar"] [data-testid="stSlider"] [data-baseweb="tooltip"],
-    [data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stThumbValue"] {
-        display: none !important;
+    [data-testid="stSidebar"] .stTextArea {
+        margin-top: 4px !important;
+        margin-bottom: -4px !important;
+    }
+    [data-testid="stSidebar"] .stTextArea textarea {
+        font-size: 0.78rem !important;
+        padding: 5px !important;
+        color: #2c3e50 !important;
     }
 
-    /* 통일된 카드 스타일 */
+    /* 메인 영역 카드 스타일 (기존 유지) */
     .stat-card {
         background: #ffffff; border-radius: 12px; padding: 16px;
         border: 1px solid #eaeaea; box-shadow: 0px 4px 10px rgba(0,0,0,0.02); height: 100%;
@@ -38,28 +66,23 @@ st.markdown("""
     .stat-title { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
     .stat-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 700; color: #1e293b; }
-
     .section-header {
-        font-size: 1.25rem; font-weight: 800; color: #334155; 
+        font-size: 1.25rem; font-weight: 800; color: #334155;
         margin-top: 0px; margin-bottom: 12px;
         display: flex; align-items: center; gap: 8px;
     }
-
     .block-container { padding-top: 2.5rem !important; padding-bottom: 1rem !important; }
     .stPlotlyChart { margin-bottom: 15px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-if "GEMINI_API_KEY" in st.secrets:
-    import google.generativeai as genai
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
-# ── 사이드바
 with st.sidebar:
+    if st.button("⬅ 홈으로 돌아가기", use_container_width=True):
+        st.switch_page("app.py")
+
     st.markdown("### 🔬 제어 및 입력 패널")
+
     bjt_type = st.selectbox("소자 타입 선택", ["NPN", "PNP"])
-    st.markdown("---")
-    st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
 
     if "v_be_val" not in st.session_state: st.session_state.v_be_val = 0.75
     if "v_bc_val" not in st.session_state: st.session_state.v_bc_val = -2.80
@@ -68,6 +91,9 @@ with st.sidebar:
     def update_be_num():    st.session_state.be_num   = st.session_state.v_be_val
     def update_bc_slider(): st.session_state.v_bc_val = st.session_state.bc_num
     def update_bc_num():    st.session_state.bc_num   = st.session_state.v_bc_val
+
+    st.markdown("---")
+    st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
 
     label_be = "베이스-에미터 전압 V_BE (V)" if bjt_type == "NPN" else "에미터-베이스 전압 V_EB (V)"
     st.markdown(f"<span style='font-size:0.75rem;font-weight:700;color:#2c3e50;'>{label_be}</span>", unsafe_allow_html=True)
@@ -91,7 +117,7 @@ with st.sidebar:
                                  value="현재 바이어스 상태가 증폭기로서 왜 적합한지 밴드 다이어그램 관점에서 설명해줘.",
                                  placeholder="e.g. 현재 전압 조건 상태에 대해 물리적으로 쉽게 설명해줘.")
     ai_btn = st.button("⊙ AI 실시간 해설 보기", use_container_width=True)
-
+    
 # ── 물리량 계산
 V_CC    = 5.0; R_C = 800.0; beta = 150; V_AF = 100.0
 early_k = 1.0 / V_AF
