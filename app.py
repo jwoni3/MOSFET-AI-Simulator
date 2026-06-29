@@ -147,13 +147,13 @@ def get_battery_svg(cx, cy, voltage, is_left_loop, color):
     if pos_right: # [-  |+]
         lines.append(f'<line x1="{cx-5}" y1="{cy-10}" x2="{cx-5}" y2="{cy+10}" stroke="#1e293b" stroke-width="3"/>')
         lines.append(f'<line x1="{cx+5}" y1="{cy-15}" x2="{cx+5}" y2="{cy+15}" stroke="#1e293b" stroke-width="1.5"/>')
-        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">-</text>')
-        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">+</text>')
+        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="sans-serif" font-weight="bold" font-size="16" fill="{color}">-</text>')
+        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="sans-serif" font-weight="bold" font-size="16" fill="{color}">+</text>')
     else: # [+  |-]
         lines.append(f'<line x1="{cx-5}" y1="{cy-15}" x2="{cx-5}" y2="{cy+15}" stroke="#1e293b" stroke-width="1.5"/>')
         lines.append(f'<line x1="{cx+5}" y1="{cy-10}" x2="{cx+5}" y2="{cy+10}" stroke="#1e293b" stroke-width="3"/>')
-        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">+</text>')
-        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="monospace" font-weight="bold" font-size="16" fill="{color}">-</text>')
+        lines.append(f'<text x="{cx-14}" y="{cy-16}" font-family="sans-serif" font-weight="bold" font-size="16" fill="{color}">+</text>')
+        lines.append(f'<text x="{cx+14}" y="{cy-16}" font-family="sans-serif" font-weight="bold" font-size="16" fill="{color}">-</text>')
         
     return "".join(lines)
 
@@ -173,10 +173,10 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
             .region-title {{ font-family: sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; }}
             .region-sub {{ font-family: sans-serif; font-size: 11px; text-anchor: middle; }}
             .term-text {{ font-family: serif; font-size: 16px; font-weight: bold; fill: #1e293b; dominant-baseline: middle; }}
-            .voltage-text {{ font-family: monospace; font-size: 11px; font-weight: bold; text-anchor: middle; }}
+            .voltage-text {{ font-family: sans-serif; font-size: 12px; font-weight: bold; text-anchor: middle; }}
             .line-style {{ stroke: #1e293b; stroke-width: 1.5; fill: none; }}
         </style>
-        
+
         <rect x="60" y="30" width="90" height="45" fill="{e_bg}" stroke="{e_fg}" stroke-width="1.5"/>
         <text x="105" y="48" class="region-title" fill="{e_fg}">{e_txt}</text>
         <text x="105" y="65" class="region-sub" fill="{e_fg}">Emitter</text>
@@ -196,7 +196,7 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
         <text x="360" y="54" class="term-text">C</text>
         
         <line x1="180" y1="75" x2="180" y2="150" class="line-style"/>
-        <text x="180" y="105" class="term-text" style="text-anchor: middle; background: white;">B</text>
+        <text x="180" y="20" class="term-text" style="text-anchor: middle;">B</text>
         
         <line x1="20" y1="52" x2="20" y2="150" class="line-style"/>
         <line x1="20" y1="150" x2="90" y2="150" class="line-style"/>
@@ -219,7 +219,6 @@ bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 # 레이아웃: 메인 타이틀 & 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
 
-# 요청사항 반영: 스크린샷과 유사하게 왼쪽 정렬 + 영문 타이틀 + 하단 구분선 + 현미경 이모지
 st.markdown(f"""
 <h1 style='text-align:left; font-size:2.4rem; font-weight:900; color:#1e293b; margin-top:0; padding-bottom:12px; border-bottom:1px solid #e2e8f0; margin-bottom: 24px;'>
     🔬 {bjt_type} BJT SIMULATOR
