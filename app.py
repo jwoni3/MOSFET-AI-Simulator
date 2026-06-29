@@ -82,7 +82,7 @@ with st.sidebar:
     user_question = st.text_area("질문 입력", height=60, label_visibility="collapsed",
                                  value="현재 바이어스 상태가 증폭기로서 왜 적합한지 밴드 다이어그램 관점에서 설명해줘.",
                                  placeholder="e.g. 현재 바이어스 상태를 물리적으로 설명해줘.")
-    ai_btn = st.button("🚀 Gemini 분석 요청", use_container_width=True)
+    ai_btn = st.button("🚀 AI 분석 요청", use_container_width=True)
 
 # ── 물리량 계산
 V_CC    = 5.0; R_C = 800.0; beta = 150; V_AF = 100.0
@@ -193,8 +193,8 @@ desc_color = desc_color_map[anim_key]
 # ════════════════════════════════════════════════
 # 레이아웃: 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
-# 요청사항 반영: 제목 글자 크기 더 크게(h2 및 font-size 1.8rem 적용)
-st.markdown("<h2 style='margin:0 0 16px 0; font-size:1.8rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h2>", unsafe_allow_html=True)
+# 타이틀 가운데 정렬 및 폰트 크기 증대 (2.2rem)
+st.markdown("<h2 style='text-align:center; margin:0 0 16px 0; font-size:2.2rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h2>", unsafe_allow_html=True)
 
 col_stat, col_anim, col_ai = st.columns([0.25, 0.42, 0.33])
 
@@ -359,7 +359,7 @@ with col_anim:
 }})();
 </script>
 """
-    # 글씨 잘리는 거 방지: height를 450으로 넉넉하게 수정
+    # 글씨 잘리는 거 방지: height를 450으로 넉넉하게 유지
     components.html(canvas_html, height=450)
 
 # ── 오른쪽: AI 분석
@@ -396,7 +396,7 @@ with col_ai:
                     border:1px dashed #cbd5e1; font-size:0.82rem;
                     height:360px; color:#64748b;
                     display:flex; align-items:center; justify-content:center; text-align:center;'>
-            사이드바 하단의<br>'🚀 Gemini 분석 요청' 버튼을<br>누르면 이 자리에<br>물리 밴드 관점의<br>상세 해설이 표시됩니다.
+            사이드바 하단의<br>'🚀 AI 분석 요청' 버튼을<br>누르면 이 자리에<br>물리 밴드 관점의<br>상세한 AI 해설이 표시됩니다.
         </div>
         """, unsafe_allow_html=True)
 
