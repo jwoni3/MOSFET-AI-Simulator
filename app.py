@@ -53,14 +53,45 @@ with col1:
 
 with col2:
     st.markdown("<div class='header-text'>⚡ 에너지 밴드 다이어그램</div>", unsafe_allow_html=True)
-    x = np.linspace(0, 10, 100)
-    # 에너지 밴드 벤딩 묘사
-    y_band = [2.0 - v_be*0.8 if val < 5 else 2.0 - v_bc*0.8 for val in x]
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=y_band, line=dict(width=4, color='#3b82f6')))
-    fig.update_layout(height=300, margin=dict(l=0,r=0,t=20,b=0), xaxis=dict(visible=False), yaxis=dict(title="Energy (eV)"))
-    st.plotly_chart(fig, use_container_width=True)
+    import plotly.graph_objects as go
+import numpy as np
+
+# 1. x축 범위 설정 (N-P-N 접합 영역)
+x = np.linspace(0, 10, 200)
+
+# 2. 전압에 따른 전위 장벽(Potential Barrier) 계산
+# V_BE가 순방향이면 전위 장벽이 낮아지고, 역방향이면 높아짐
+barrier_be = 2.0 - v_be * 1.5 
+barrier_bc = 2.0 - v_bc * 1.5
+
+# 3. 밴드 벤딩 함수: N-P 접합부와 P-N 접합부의 장벽 묘사
+def get_band_y(x, b1, b2):
+    y = np.zeros_like(x)
+    # E-B 접합부 (0~5 구간)
+    y[:100] = b1 * (1 - np.exp(-(x[:100]-2.5)**2)) 
+    # B-C 접합부 (5~10 구간)
+    y[100:] = b2 * (1 - np.exp(-(x[100:]-7.5)**2))
+    return y
+
+# 4. 그래프 그리기
+fig = go.Figure()
+
+# 전도대(Ec) 및 가전자대(Ev) 시각화
+fig.add_trace(go.Scatter(x=x, y=get_band_y(x, barrier_be, barrier_bc)+1, line=dict(width=4, color='#3b82f6'), name="Ec (전도대)"))
+fig.add_trace(go.Scatter(x=x, y=get_band_y(x, barrier_be, barrier_bc)-1, line=dict(width=4, color='#ef4444'), name="Ev (가전자대)"))
+
+# 전위 장벽 강조 화살표
+fig.add_annotation(x=2.5, y=1.5, text="E-B 장벽", showarrow=True, arrowhead=2)
+fig.add_annotation(x=7.5, y=1.5, text="B-C 장벽", showarrow=True, arrowhead=2)
+
+fig.update_layout(
+    height=300, 
+    margin=dict(l=0,r=0,t=20,b=0), 
+    xaxis=dict(visible=False), 
+    yaxis=dict(title="에너지 (eV)", range=[-2, 4]),
+    plot_bgcolor='rgba(0,0,0,0)'
+)
+st.plotly_chart(fig, use_container_width=True)
 
 with col3:
     with st.container(border=True):
