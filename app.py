@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일 CSS
+# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일
 st.markdown("""
 <style>
     /* 사이드바 내부 요소 촘촘하게 줄여서 스크롤 없애기 */
@@ -120,7 +120,7 @@ early_k = 1.0 / V_AF
 be_fwd = V_be > 0
 bc_fwd = V_bc > 0
 
-# 애니메이션 로직을 위한 모드 확장 (Reverse Active 포함)
+# 애니메이션 키 연동을 위한 모드 확장
 if be_fwd and not bc_fwd:
     mode       = "순방향 활성 영역"
     mode_en    = "Forward Active"
@@ -228,7 +228,7 @@ with top_col2:
 
 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 
-# 하단 레이아웃 배치 (애니메이션 탭 추가)
+# 하단 레이아웃 배치
 tab1, tab2, tab3 = st.tabs(["🔋 에너지 밴드 다이어그램", "📈 I_C–V_CE 특성 곡선", "🏃 캐리어 거동 애니메이션"])
 
 with tab1:
@@ -388,84 +388,148 @@ with tab2:
     st.plotly_chart(fig_iv, use_container_width=True)
 
 with tab3:
-    # 동작 모드별 속도/방향/확산도 정의
-    carrier_color = "#00E6FF" if bjt_type == "NPN" else "#FF7043"
-    carrier_label = "전자 (Electron)" if bjt_type == "NPN" else "정공 (Hole)"
-
-    anim_params = {
-        "cutoff":         {"speed": 0, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 0.0},
-        "forward_active": {"speed": 4, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 0.2},
-        "saturation":     {"speed": 1, "dir":  1 if bjt_type=="NPN" else -1, "scatter": 1.5},
-        "reverse_active": {"speed": 3, "dir": -1 if bjt_type=="NPN" else  1, "scatter": 0.5},
-    }
-    ap = anim_params[anim_key]
-
-    # HTML5 Canvas 및 내부 JavaScript 렌더링 엔진 통합
+    # HTML5 Canvas 및 내부 JavaScript를 통해 전자와 정공이 모두 흐르는 애니메이션 렌더링
     canvas_html = f"""
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 20px;">
-        <canvas id="bjtCanvas" width="520" height="160"
-                style="background:#2d2d2d; border-radius:8px; display:block; box-shadow: 0px 4px 10px rgba(0,0,0,0.1);"></canvas>
-        <p style="color:#888; font-size:0.85em; margin:10px 0 0 0; font-family: sans-serif;">
-            다수 캐리어 흐름 관측: <span style="color:{carrier_color}; font-weight: bold;">● {carrier_label}</span>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 15px;">
+        <canvas id="bjtCanvas" width="530" height="160"
+                style="background:#2d2d2d; border-radius:8px; display:block; box-shadow: 0px 4px 10px rgba(0,0,0,0.15);"></canvas>
+        <p style="color:#aaa; font-size:0.82rem; margin:10px 0 0 0; font-family: sans-serif; text-align: center;">
+            <span style="color:#00E6FF; font-weight: bold;">● 전자 (Electron)</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+            <span style="color:#FF7043; font-weight: bold;">● 정공 (Hole)</span>
         </p>
     </div>
     <script>
     (function() {{
         const canvas = document.getElementById('bjtCanvas');
         const ctx    = canvas.getContext('2d');
-        const SPEED   = {ap['speed']};
-        const DIR     = {ap['dir']};
-        const SCATTER = {ap['scatter']};
-        const COLOR   = '{carrier_color}';
         const MODE    = '{anim_key}';
+        const BJT_TYPE = '{bjt_type}';
 
-        const N = 40;
-        let particles = Array.from({{length: N}}, () => ({{
-            x: Math.random() * canvas.width,
-            y: 50 + Math.random() * 60,
-            r: 4
-        }}));
+        const N_e = 25;
+        const N_h = 25;
+        let particles = [];
+
+        // 전자(Electron) 분포 생성
+        for(let i=0; i<N_e; i++){{
+            let x;
+            if (BJT_TYPE === 'NPN') {{
+                x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
+            }} else {{
+                x = 160 + Math.random() * 200;
+            }}
+            particles.push({{
+                x: x,
+                y: 45 + Math.random() * 70,
+                r: 3.5,
+                type: 'electron'
+            }});
+        }}
+
+        // 정공(Hole) 분포 생성
+        for(let i=0; i<N_h; i++){{
+            let x;
+            if (BJT_TYPE === 'NPN') {{
+                x = 160 + Math.random() * 200;
+            }} else {{
+                x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
+            }}
+            particles.push({{
+                x: x,
+                y: 45 + Math.random() * 70,
+                r: 3.5,
+                type: 'hole'
+            }});
+        }}
 
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // 물리 경계면 점선 시각화
             [160, 360].forEach(x => {{
-                ctx.strokeStyle = '#777'; ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
                 ctx.setLineDash([4, 4]);
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
                 ctx.setLineDash([]);
             }});
             
-            ctx.fillStyle = '#aaa'; ctx.font = '13px monospace';
+            ctx.fillStyle = '#bbb'; ctx.font = '13px monospace';
             const labels = {{'NPN': ['Emitter (N+)', 'Base (P)',  'Collector (N)'],
-                             'PNP': ['Emitter (P+)', 'Base (N)', 'Collector (P)']}}['{bjt_type}'];
-            ctx.fillText(labels[0],  20, 22);
-            ctx.fillText(labels[1], 195, 22);
-            ctx.fillText(labels[2], 380, 22);
+                             'PNP': ['Emitter (P+)', 'Base (N)', 'Collector (P)']}}[BJT_TYPE];
+            ctx.fillText(labels[0],  20, 25);
+            ctx.fillText(labels[1], 195, 25);
+            ctx.fillText(labels[2], 380, 25);
             
-            if (MODE === 'reverse_active') {{
+            // 실시간 상태 라벨 해설
+            if (MODE === 'forward_active') {{
+                ctx.fillStyle = '#f39c12'; ctx.font = '12px sans-serif';
+                ctx.fillText('순방향 활성: 다수 캐리어의 E→C 확산 및 소수 캐리어 주입 완료', 110, canvas.height - 10);
+            }} else if (MODE === 'reverse_active') {{
                 ctx.fillStyle = '#BB86FC'; ctx.font = '12px sans-serif';
-                ctx.fillText('역방향 활성: Emitter와 Collector 역할이 역전됨', 125, canvas.height - 12);
-            }}
-            if (MODE === 'cutoff') {{
-                ctx.fillStyle = '#E74C3C'; ctx.font = '13px sans-serif';
-                ctx.fillText('차단 (Cutoff): 장벽에 막혀 캐리어 이동 없음', 135, canvas.height - 12);
+                ctx.fillText('역방향 활성: Collector가 캐리어를 방출하여 Emitter로 전송', 120, canvas.height - 10);
+            }} else if (MODE === 'saturation') {{
+                ctx.fillStyle = '#28a745'; ctx.font = '12px sans-serif';
+                ctx.fillText('포화 상태: 양측 전위 장벽 축소로 캐리어 격렬한 상호 주입 발생', 105, canvas.height - 10);
+            }} else if (MODE === 'cutoff') {{
+                ctx.fillStyle = '#E74C3C'; ctx.font = '12px sans-serif';
+                ctx.fillText('차단 상태: 인가 전압 부족으로 전류의 드리프트/확산 차단', 125, canvas.height - 10);
             }}
             
-            ctx.shadowBlur = 6; ctx.shadowColor = COLOR;
+            // 각 캐리어 입자들의 물리 엔진 구현
             particles.forEach(p => {{
-                ctx.fillStyle = COLOR;
+                ctx.fillStyle = p.type === 'electron' ? '#00E6FF' : '#FF7043';
+                ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
                 
-                if (SPEED > 0) {{
-                    p.x += DIR * SPEED + (Math.random() - 0.5) * SCATTER;
-                    p.y += (Math.random() - 0.5) * SCATTER * 0.5;
-                    p.y  = Math.max(40, Math.min(canvas.height - 20, p.y));
-                    if (DIR > 0 && p.x > canvas.width) p.x = 0;
-                    if (DIR < 0 && p.x < 0)            p.x = canvas.width;
+                let vx = 0;
+                let scatterX = 0.3;
+                let scatterY = 0.3;
+                
+                if (MODE === 'forward_active') {{
+                    if (BJT_TYPE === 'NPN') {{
+                        if (p.type === 'electron') {{ vx = 3.2; scatterX = 0.2; }}
+                        else {{ vx = -0.5; scatterX = 0.4; }} // 정공은 반대 방향 흐름 형성
+                    }} else {{
+                        if (p.type === 'hole') {{ vx = 3.2; scatterX = 0.2; }}
+                        else {{ vx = -0.5; scatterX = 0.4; }}
+                    }}
+                }} else if (MODE === 'saturation') {{
+                    scatterX = 1.3; scatterY = 1.3;
+                    if (BJT_TYPE === 'NPN') {{
+                        if (p.type === 'electron') {{
+                            if (p.x < 160) vx = 1.0;
+                            else if (p.x > 360) vx = -1.0;
+                        }} else {{
+                            if (p.x >= 160 && p.x <= 360) vx = (Math.random() - 0.5) * 0.4;
+                        }}
+                    }} else {{
+                        if (p.type === 'hole') {{
+                            if (p.x < 160) vx = 1.0;
+                            else if (p.x > 360) vx = -1.0;
+                        }} else {{
+                            if (p.x >= 160 && p.x <= 360) vx = (Math.random() - 0.5) * 0.4;
+                        }}
+                    }}
+                }} else if (MODE === 'reverse_active') {{
+                    if (BJT_TYPE === 'NPN') {{
+                        if (p.type === 'electron') {{ vx = -2.5; scatterX = 0.3; }}
+                        else {{ vx = 0.5; scatterX = 0.4; }}
+                    }} else {{
+                        if (p.type === 'hole') {{ vx = -2.5; scatterX = 0.3; }}
+                        else {{ vx = 0.5; scatterX = 0.4; }}
+                    }}
                 }}
+                
+                p.x += vx + (Math.random() - 0.5) * scatterX;
+                p.y += (Math.random() - 0.5) * scatterY;
+                
+                // 루프식 무한 스크롤 및 벽 충돌
+                if (p.x > canvas.width) p.x = 0;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.y < 35) p.y = 135;
+                if (p.y > 135) p.y = 35;
             }});
-            ctx.shadowBlur = 0;
+            
             requestAnimationFrame(draw);
         }}
         draw();
@@ -473,4 +537,4 @@ with tab3:
     </script>
     """
 
-    components.html(canvas_html, height=240)
+    components.html(canvas_html, height=230)
