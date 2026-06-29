@@ -71,7 +71,7 @@ st.markdown("""
         color: #2c3e50 !important;
     }
 
-    /* 메인 영역 카드 스타일 (기존 유지) */
+    /* 메인 영역 카드 스타일 */
     .stat-card {
         background: #ffffff; border-radius: 12px; padding: 16px;
         border: 1px solid #eaeaea; box-shadow: 0px 4px 10px rgba(0,0,0,0.02); height: 100%;
@@ -459,8 +459,9 @@ with col2:
         textposition="top left" if bjt_type=="NPN" else "bottom right", 
         textfont=dict(size=11,color='#dc2626',weight='bold'), name="Q점"))
     
+    # [수정] 타이틀 텍스트 중앙 정렬 및 볼드 처리
     fig_iv.update_layout(
-        title=dict(text="I-V Characteristic Curve", font=dict(size=12, color="#64748b"), x=0.5, y=0.95),
+        title=dict(text="<b>I-V Characteristic Curve</b>", font=dict(size=14, color="black"), x=0.5, xanchor="center", y=0.95),
         xaxis_title="V_CE [V]", yaxis_title="I_C [mA]",
         xaxis=dict(range=[-0.2, V_CC+1.2] if bjt_type=="NPN" else [-(V_CC+1.2), 0.2], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#475569', zerolinewidth=1.5),
         yaxis=dict(range=[-0.5, sat_ic_mag+1.5] if bjt_type=="NPN" else [-(sat_ic_mag+1.5), 0.5], showgrid=True, gridcolor='#f1f5f9', zeroline=True, zerolinecolor='#475569', zerolinewidth=1.5),
@@ -540,8 +541,10 @@ with col2:
 
     fig_band.add_vline(x=2.8, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     fig_band.add_vline(x=5.2, line=dict(color='#94a3b8',width=1.5,dash='dot'))
+    
+    # [수정] 타이틀 텍스트 중앙 정렬 및 볼드 처리
     fig_band.update_layout(
-        title=dict(text=f"Energy Band Diagram [{bjt_type}]", font=dict(size=12, color="#64748b"), x=0.5, y=0.95),
+        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=14, color="black"), x=0.5, xanchor="center", y=0.95),
         xaxis=dict(visible=False, range=[-0.2,8.6]),
         yaxis=dict(visible=False, range=[min(ev_all)-0.35, max(ec_all)+0.8]),
         height=320, margin=dict(l=10,r=10,t=40,b=10), showlegend=False, plot_bgcolor='white'
