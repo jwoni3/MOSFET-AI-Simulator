@@ -388,7 +388,7 @@ with tab2:
     st.plotly_chart(fig_iv, use_container_width=True)
 
 with tab3:
-    # HTML5 Canvas 및 내부 JavaScript를 통해 전자와 정공이 모두 흐르는 애니메이션 렌더링
+    # 물리 법칙에 맞게 수정한 실시간 렌더링 애니메이션
     canvas_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 15px;">
         <canvas id="bjtCanvas" width="530" height="160"
@@ -405,16 +405,16 @@ with tab3:
         const MODE    = '{anim_key}';
         const BJT_TYPE = '{bjt_type}';
 
-        const N_e = 25;
-        const N_h = 25;
+        const N_e = 35;
+        const N_h = 35;
         let particles = [];
 
-        // 전자(Electron) 분포 생성
+        // 전자(Electron) 분포 초기화
         for(let i=0; i<N_e; i++){{
             let x;
-            if (BJT_TYPE === 'NPN') {{
+            if (BJT_TYPE === 'NPN') {{ // NPN의 다수 캐리어
                 x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
-            }} else {{
+            }} else {{ // PNP의 소수 캐리어
                 x = 160 + Math.random() * 200;
             }}
             particles.push({{
@@ -425,12 +425,12 @@ with tab3:
             }});
         }}
 
-        // 정공(Hole) 분포 생성
+        // 정공(Hole) 분포 초기화
         for(let i=0; i<N_h; i++){{
             let x;
-            if (BJT_TYPE === 'NPN') {{
+            if (BJT_TYPE === 'NPN') {{ // NPN의 소수 캐리어
                 x = 160 + Math.random() * 200;
-            }} else {{
+            }} else {{ // PNP의 다수 캐리어
                 x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
             }}
             particles.push({{
@@ -444,7 +444,7 @@ with tab3:
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 물리 경계면 점선 시각화
+            // 물리 접합면 시각화
             [160, 360].forEach(x => {{
                 ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
                 ctx.setLineDash([4, 4]);
@@ -459,22 +459,22 @@ with tab3:
             ctx.fillText(labels[1], 195, 25);
             ctx.fillText(labels[2], 380, 25);
             
-            // 실시간 상태 라벨 해설
+            // 모드 해설
             if (MODE === 'forward_active') {{
                 ctx.fillStyle = '#f39c12'; ctx.font = '12px sans-serif';
-                ctx.fillText('순방향 활성: 다수 캐리어의 E→C 확산 및 소수 캐리어 주입 완료', 110, canvas.height - 10);
+                ctx.fillText('순방향 활성: 다수 캐리어의 확산/표류 및 소수 캐리어 정상 주입', 110, canvas.height - 10);
             }} else if (MODE === 'reverse_active') {{
                 ctx.fillStyle = '#BB86FC'; ctx.font = '12px sans-serif';
-                ctx.fillText('역방향 활성: Collector가 캐리어를 방출하여 Emitter로 전송', 120, canvas.height - 10);
+                ctx.fillText('역방향 활성: 컬렉터와 이미터 역할 교차, 역방향 캐리어 흐름', 110, canvas.height - 10);
             }} else if (MODE === 'saturation') {{
                 ctx.fillStyle = '#28a745'; ctx.font = '12px sans-serif';
-                ctx.fillText('포화 상태: 양측 전위 장벽 축소로 캐리어 격렬한 상호 주입 발생', 105, canvas.height - 10);
+                ctx.fillText('포화: 양쪽(E, C)에서 베이스로 캐리어 주입 및 베이스에서 양방향 유출', 90, canvas.height - 10);
             }} else if (MODE === 'cutoff') {{
                 ctx.fillStyle = '#E74C3C'; ctx.font = '12px sans-serif';
-                ctx.fillText('차단 상태: 인가 전압 부족으로 전류의 드리프트/확산 차단', 125, canvas.height - 10);
+                ctx.fillText('차단: 양측 장벽이 높아 캐리어의 이동이 완벽히 차단됨', 115, canvas.height - 10);
             }}
             
-            // 각 캐리어 입자들의 물리 엔진 구현
+            // 입자 물리 렌더링 로직 (포화 모드 교차 주입 정확하게 수정)
             particles.forEach(p => {{
                 ctx.fillStyle = p.type === 'electron' ? '#00E6FF' : '#FF7043';
                 ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
@@ -482,50 +482,70 @@ with tab3:
                 ctx.shadowBlur = 0;
                 
                 let vx = 0;
-                let scatterX = 0.3;
-                let scatterY = 0.3;
+                let scatterX = 0.2;
                 
                 if (MODE === 'forward_active') {{
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ vx = 3.2; scatterX = 0.2; }}
-                        else {{ vx = -0.5; scatterX = 0.4; }} // 정공은 반대 방향 흐름 형성
-                    }} else {{
-                        if (p.type === 'hole') {{ vx = 3.2; scatterX = 0.2; }}
-                        else {{ vx = -0.5; scatterX = 0.4; }}
+                        if (p.type === 'electron') {{ vx = 3.2; scatterX = 0.3; }}
+                        else {{ // 베이스의 정공은 이미터로 역확산
+                            if(p.x > 160) vx = -0.8; else vx = -2.0; 
+                            scatterX = 0.5; 
+                        }} 
+                    }} else {{ // PNP
+                        if (p.type === 'hole') {{ vx = 3.2; scatterX = 0.3; }}
+                        else {{ 
+                            if(p.x > 160) vx = -0.8; else vx = -2.0;
+                            scatterX = 0.5; 
+                        }}
                     }}
                 }} else if (MODE === 'saturation') {{
-                    scatterX = 1.3; scatterY = 1.3;
+                    scatterX = 0.6; // 불규칙 충돌 분산도
                     if (BJT_TYPE === 'NPN') {{
                         if (p.type === 'electron') {{
-                            if (p.x < 160) vx = 1.0;
-                            else if (p.x > 360) vx = -1.0;
+                            // 전자는 이미터와 컬렉터 양쪽에서 베이스로 맹렬히 진입
+                            if (p.x < 160) vx = 2.0; 
+                            else if (p.x > 360) vx = -2.0;
+                            else vx = (Math.random() - 0.5) * 1.5; // 베이스 내부에서의 충돌 축적
                         }} else {{
-                            if (p.x >= 160 && p.x <= 360) vx = (Math.random() - 0.5) * 0.4;
+                            // 베이스의 정공은 이미터와 컬렉터 양쪽 밖으로 밀려 나감
+                            if (p.x >= 160 && p.x < 260) vx = -1.2;
+                            else if (p.x >= 260 && p.x <= 360) vx = 1.2;
+                            else vx = (Math.random() - 0.5) * 1.5;
                         }}
-                    }} else {{
+                    }} else {{ // PNP
                         if (p.type === 'hole') {{
-                            if (p.x < 160) vx = 1.0;
-                            else if (p.x > 360) vx = -1.0;
+                            if (p.x < 160) vx = 2.0; 
+                            else if (p.x > 360) vx = -2.0;
+                            else vx = (Math.random() - 0.5) * 1.5;
                         }} else {{
-                            if (p.x >= 160 && p.x <= 360) vx = (Math.random() - 0.5) * 0.4;
+                            if (p.x >= 160 && p.x < 260) vx = -1.2;
+                            else if (p.x >= 260 && p.x <= 360) vx = 1.2;
+                            else vx = (Math.random() - 0.5) * 1.5;
                         }}
                     }}
                 }} else if (MODE === 'reverse_active') {{
                     if (BJT_TYPE === 'NPN') {{
                         if (p.type === 'electron') {{ vx = -2.5; scatterX = 0.3; }}
-                        else {{ vx = 0.5; scatterX = 0.4; }}
+                        else {{ vx = 0.8; scatterX = 0.4; }}
                     }} else {{
                         if (p.type === 'hole') {{ vx = -2.5; scatterX = 0.3; }}
-                        else {{ vx = 0.5; scatterX = 0.4; }}
+                        else {{ vx = 0.8; scatterX = 0.4; }}
                     }}
                 }}
                 
+                // 위치 이동 및 벽 통과 시 리스폰 처리
                 p.x += vx + (Math.random() - 0.5) * scatterX;
-                p.y += (Math.random() - 0.5) * scatterY;
+                p.y += (Math.random() - 0.5) * 0.4;
                 
-                // 루프식 무한 스크롤 및 벽 충돌
-                if (p.x > canvas.width) p.x = 0;
-                if (p.x < 0) p.x = canvas.width;
+                if (MODE === 'saturation') {{
+                    // 포화 상태에서 양방향으로 나간 입자가 반대편에서 재주입되는 루프
+                    if (p.x > canvas.width) p.x = 0;
+                    if (p.x < 0) p.x = canvas.width;
+                }} else {{
+                    if (vx > 0 && p.x > canvas.width) p.x = 0;
+                    if (vx < 0 && p.x < 0) p.x = canvas.width;
+                }}
+                
                 if (p.y < 35) p.y = 135;
                 if (p.y > 135) p.y = 35;
             }});
