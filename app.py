@@ -37,8 +37,8 @@ st.markdown("""
     /* 플롯 여백 최소화 */
     .stPlotlyChart { margin: 0 !important; padding: 0 !important; }
 
-    /* 전체 페이지 상단 여백 확보 (제목 잘림 방지) */
-    .block-container { padding-top: 3rem !important; padding-bottom: 1rem !important; }
+    /* 전체 페이지 상단 여백 확보 */
+    .block-container { padding-top: 2rem !important; padding-bottom: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +92,7 @@ bc_fwd  = V_bc > 0
 
 if be_fwd and not bc_fwd:
     mode, mode_en, mode_color, anim_key = "순방향 활성 영역", "Forward Active", "#f39c12", "forward_active"
-    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 표류 → 증폭기 동작"
+    mode_desc = "B-E 순방향 + B-C 역방향 → 전자 확산 후 포류 → 증폭기 동작"
 elif be_fwd and bc_fwd:
     mode, mode_en, mode_color, anim_key = "포화 영역", "Saturation", "#28a745", "saturation"
     mode_desc = "양쪽 접합 순방향 → 장벽 소실 → 캐리어 범람 → V_CE≈0.2V"
@@ -119,100 +119,66 @@ else:
 
 q_ic_mA = q_ic_A * 1000
 
-# ── BJT 구조 SVG (회로 기호 스타일 - 화이트 모던 테마)
+# ── BJT 구조 SVG (교안 블록 스타일)
 def make_bjt_svg(bjt_type, V_be, V_bc):
     is_npn = bjt_type == "NPN"
-    vbe_lbl = f"V_BE={V_be:.2f}V" if is_npn else f"V_EB={V_be:.2f}V"
-    vbc_lbl = f"V_BC={V_bc:.2f}V" if is_npn else f"V_CB={V_bc:.2f}V"
-
-    # 밝은 테마 색상
-    e_color = "#3b82f6" if is_npn else "#ef4444"
-    c_color = "#3b82f6" if is_npn else "#ef4444"
-    b_color = "#ef4444" if is_npn else "#3b82f6"
-    line_color = "#475569" # 짙은 회색 선
-
-    # 영역 배경색
-    e_fill = "#e0f2fe" if is_npn else "#fee2e2"
-    e_stroke = "#0284c7" if is_npn else "#dc2626"
-    b_fill = "#fee2e2" if is_npn else "#e0f2fe"
-    b_stroke = "#dc2626" if is_npn else "#0284c7"
-    c_fill = "#f0f9ff" if is_npn else "#fef2f2"
     
-    e_text_color = "#0369a1" if is_npn else "#b91c1c"
-    b_text_color = "#b91c1c" if is_npn else "#0369a1"
-    c_text_color = "#0369a1" if is_npn else "#b91c1c"
-
-    # NPN: 이미터 화살표 밖으로, PNP: 이미터 화살표 안으로
-    arrow_e = f"""
-      <defs>
-        <marker id="arrowE" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <polygon points="0,0 8,4 0,8" fill="{e_color}"/>
-        </marker>
-      </defs>
-      <line x1="200" y1="110" x2="155" y2="140" stroke="{e_color}" stroke-width="2.5" marker-end="url(#arrowE)"/>
-    """ if is_npn else f"""
-      <defs>
-        <marker id="arrowE" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <polygon points="8,0 0,4 8,8" fill="{e_color}"/>
-        </marker>
-      </defs>
-      <line x1="155" y1="140" x2="200" y2="110" stroke="{e_color}" stroke-width="2.5" marker-end="url(#arrowE)"/>
-    """
+    # 교안과 유사한 색상 지정 (P영역은 파란색 계열, N영역은 밝은 회색 계열)
+    n_color = "#f1f5f9"
+    p_color = "#bfdbfe"
+    
+    e_fill = n_color if is_npn else p_color
+    b_fill = p_color if is_npn else n_color
+    c_fill = n_color if is_npn else p_color
+    
+    e_text = "N⁺" if is_npn else "P⁺"
+    b_text = "P" if is_npn else "N"
+    c_text = "N" if is_npn else "P"
+    
+    vbe_str = f"V_BE = {V_be:.2f}V" if is_npn else f"V_EB = {V_be:.2f}V"
+    vbc_str = f"V_BC = {V_bc:.2f}V" if is_npn else f"V_CB = {V_bc:.2f}V"
 
     svg = f"""
-<svg width="340" height="200" viewBox="0 0 340 200" style="display:block; margin:auto;">
-  <style>
-    .bjt-label {{ font-family: sans-serif; font-weight: bold; }}
-    .bjt-sub   {{ font-family: sans-serif; font-size: 10px; fill: #64748b; }}
-    .pin-label {{ font-family: monospace; font-size: 14px; font-weight: bold; }}
-  </style>
-
-  <rect x="195" y="60" width="10" height="80" rx="2" fill="{line_color}"/>
-
-  <line x1="200" y1="90" x2="255" y2="55" stroke="{c_color}" stroke-width="2.5"/>
-  {arrow_e}
-
-  <line x1="255" y1="55" x2="255" y2="20" stroke="{c_color}" stroke-width="2.5"/>
-  <line x1="155" y1="140" x2="155" y2="175" stroke="{e_color}" stroke-width="2.5"/>
-
-  <line x1="115" y1="100" x2="195" y2="100" stroke="{b_color}" stroke-width="2.5"/>
-
-  <circle cx="255" cy="18" r="5" fill="{c_color}"/>
-  <circle cx="155" cy="177" r="5" fill="{e_color}"/>
-  <circle cx="113" cy="100" r="5" fill="{b_color}"/>
-
-  <text x="262" y="22" class="pin-label" fill="{c_color}">C</text>
-  <text x="162" y="192" class="pin-label" fill="{e_color}">E</text>
-  <text x="88"  y="104" class="pin-label" fill="{b_color}">B</text>
-
-  <rect x="30" y="130" width="70" height="36" rx="5"
-        fill="{e_fill}" stroke="{e_stroke}" stroke-width="1.5"/>
-  <text x="65" y="146" text-anchor="middle" class="bjt-label"
-        fill="{e_text_color}" font-size="12">{'N⁺' if is_npn else 'P⁺'}</text>
-  <text x="65" y="160" text-anchor="middle" class="bjt-sub">Emitter</text>
-
-  <rect x="108" y="75" width="50" height="36" rx="5"
-        fill="{b_fill}" stroke="{b_stroke}" stroke-width="1.5"/>
-  <text x="133" y="91" text-anchor="middle" class="bjt-label"
-        fill="{b_text_color}" font-size="12">{'P' if is_npn else 'N'}</text>
-  <text x="133" y="105" text-anchor="middle" class="bjt-sub">Base</text>
-
-  <rect x="230" y="28" width="70" height="36" rx="5"
-        fill="{c_fill}" stroke="{e_stroke}" stroke-width="1.5"/>
-  <text x="265" y="44" text-anchor="middle" class="bjt-label"
-        fill="{c_text_color}" font-size="12">{'N' if is_npn else 'P'}</text>
-  <text x="265" y="58" text-anchor="middle" class="bjt-sub">Collector</text>
-
-  <text x="170" y="172" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold"
-        fill="{e_color}">{vbe_lbl}</text>
-  <text x="248" y="100" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold"
-        fill="{c_color}">{vbc_lbl}</text>
-
-  <text x="310" y="100" text-anchor="middle" font-family="sans-serif" font-size="14"
-        font-weight="bold" fill="#334155">{bjt_type}</text>
-  <text x="310" y="114" text-anchor="middle" font-family="sans-serif" font-size="10"
-        fill="#64748b">BJT</text>
-</svg>"""
+    <svg width="340" height="180" viewBox="0 0 340 180" style="display:block; margin:auto; background:#ffffff;">
+        <style>
+            .region-text {{ font-family: sans-serif; font-size: 16px; font-weight: bold; fill: #1e293b; text-anchor: middle; dominant-baseline: middle; }}
+            .term-text {{ font-family: serif; font-size: 16px; font-weight: bold; fill: #000; dominant-baseline: middle; }}
+            .voltage-text {{ font-family: monospace; font-size: 12px; font-weight: bold; fill: #334155; text-anchor: middle; }}
+            .line-style {{ stroke: #1e293b; stroke-width: 2; fill: none; }}
+        </style>
+        
+        <rect x="70" y="40" width="80" height="50" fill="{e_fill}" stroke="#1e293b" stroke-width="2"/>
+        <text x="110" y="66" class="region-text">{e_text}</text>
+        
+        <rect x="150" y="40" width="40" height="50" fill="{b_fill}" stroke="#1e293b" stroke-width="2"/>
+        <text x="170" y="66" class="region-text">{b_text}</text>
+        
+        <rect x="190" y="40" width="80" height="50" fill="{c_fill}" stroke="#1e293b" stroke-width="2"/>
+        <text x="230" y="66" class="region-text">{c_text}</text>
+        
+        <line x1="70" y1="65" x2="30" y2="65" class="line-style"/>
+        <circle cx="28" cy="65" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+        <text x="12" y="66" class="term-text">E</text>
+        
+        <line x1="270" y1="65" x2="310" y2="65" class="line-style"/>
+        <circle cx="312" cy="65" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+        <text x="325" y="66" class="term-text">C</text>
+        
+        <line x1="170" y1="90" x2="170" y2="130" class="line-style"/>
+        <circle cx="170" cy="132" r="3" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+        <text x="170" y="148" class="term-text" style="text-anchor: middle;">B</text>
+        
+        <line x1="30" y1="65" x2="30" y2="132" class="line-style"/>
+        <line x1="30" y1="132" x2="65" y2="132" class="line-style"/>
+        <text x="100" y="135" class="voltage-text">{vbe_str}</text>
+        <line x1="135" y1="132" x2="170" y2="132" class="line-style"/>
+        
+        <line x1="310" y1="65" x2="310" y2="132" class="line-style"/>
+        <line x1="310" y1="132" x2="275" y2="132" class="line-style"/>
+        <text x="240" y="135" class="voltage-text">{vbc_str}</text>
+        <line x1="205" y1="132" x2="170" y2="132" class="line-style"/>
+    </svg>
+    """
     return svg
 
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
@@ -227,7 +193,8 @@ desc_color = desc_color_map[anim_key]
 # ════════════════════════════════════════════════
 # 레이아웃: 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
-st.markdown("<h3 style='margin:0 0 12px 0; font-size:1.25rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
+# 요청사항 반영: 제목 글자 크기 더 크게(h2 및 font-size 1.8rem 적용)
+st.markdown("<h2 style='margin:0 0 16px 0; font-size:1.8rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h2>", unsafe_allow_html=True)
 
 col_stat, col_anim, col_ai = st.columns([0.25, 0.42, 0.33])
 
@@ -392,7 +359,8 @@ with col_anim:
 }})();
 </script>
 """
-    components.html(canvas_html, height=390)
+    # 글씨 잘리는 거 방지: height를 450으로 넉넉하게 수정
+    components.html(canvas_html, height=450)
 
 # ── 오른쪽: AI 분석
 with col_ai:
