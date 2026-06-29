@@ -54,21 +54,54 @@ with col1:
 
 with col2:
     st.markdown("<div class='header-text'>⚡ 에너지 밴드 다이어그램</div>", unsafe_allow_html=True)
-    x = np.linspace(0, 10, 200)
-    barrier_be, barrier_bc = 2.0 - v_be*1.5, 2.0 - v_bc*1.5
-    y_band = [barrier_be if val < 5 else barrier_bc for val in x]
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=np.array(y_band)+0.5, line=dict(width=3, color='#3b82f6'), name="Ec"))
-    fig.add_trace(go.Scatter(x=x, y=np.array(y_band)-0.5, line=dict(width=3, color='#ef4444'), name="Ev"))
-    
-    # 전자/정공 표현
-    if v_be >= 0.5:
-        fig.add_trace(go.Scatter(x=[1.5, 8.5], y=[2.2, 2.2], mode='markers', marker=dict(size=12, color='black'), name="전자"))
-        fig.add_trace(go.Scatter(x=[1.5, 8.5], y=[-0.8, -0.8], mode='markers', marker=dict(size=12, color='black', symbol='circle-open'), name="정공"))
+    # [수정된 에너지 밴드 시각화 로직]
+import plotly.graph_objects as go
+import numpy as np
 
-    fig.update_layout(height=250, margin=dict(l=10,r=10,t=10,b=10), xaxis=dict(visible=False), yaxis=dict(title="Energy (eV)", range=[-2, 3]))
-    st.plotly_chart(fig, use_container_width=True)
+# 1. 완곡한 밴드 벤딩을 위한 함수 (물리적 모델링)
+def get_smooth_band(x, center, barrier_height):
+    # tanh 함수를 사용하여 아주 매끄러운 완곡 곡선 생성
+    return barrier_height * (0.5 * (np.tanh((x - center) * 2) + 1))
+
+x = np.linspace(0, 10, 200)
+# 장벽 높이 (바이어스에 따라 변동)
+h_eb = 2.0 - v_be * 1.2
+h_bc = 2.0 - v_bc * 1.2
+
+# Ec, Ev 계산 (중앙을 기준으로 완곡하게)
+ec = get_smooth_band(x, 2.5, h_eb) + get_smooth_band(x, 7.5, h_bc) + 1.0
+ev = ec - 2.0  # 에너지 갭 유지
+
+fig = go.Figure()
+
+# 밴드 선 (Ec, Ev)
+fig.add_trace(go.Scatter(x=x, y=ec, line=dict(width=3, color='#3b82f6'), name="Ec"))
+fig.add_trace(go.Scatter(x=x, y=ev, line=dict(width=3, color='#ef4444'), name="Ev"))
+# 페르미 준위 (Ef)
+fig.add_trace(go.Scatter(x=x, y=np.zeros_like(x)+0.5, line=dict(dash='dash', color='black'), name="Ef"))
+
+# 전자/정공 대량 배치 (np.random 활용)
+num_carriers = 50
+fig.add_trace(go.Scatter(
+    x=np.random.uniform(0, 10, num_carriers), 
+    y=np.random.uniform(ec+0.1, ec+0.8, num_carriers),
+    mode='markers', marker=dict(size=6, color='black'), name="전자"
+))
+fig.add_trace(go.Scatter(
+    x=np.random.uniform(0, 10, num_carriers), 
+    y=np.random.uniform(ev-0.8, ev-0.1, num_carriers),
+    mode='markers', marker=dict(size=6, color='black', symbol='circle-open'), name="정공"
+))
+
+# 전위 장벽 화살표 표시
+fig.add_annotation(x=2.5, y=1.5, text="장벽", showarrow=True, arrowhead=2, ax=0, ay=-30)
+
+fig.update_layout(
+    height=300, margin=dict(l=10, r=10, t=10, b=10),
+    xaxis=dict(visible=False), yaxis=dict(title="Energy (eV)", range=[-2, 4]),
+    plot_bgcolor='rgba(0,0,0,0)', showlegend=False
+)
+st.plotly_chart(fig, use_container_width=True)
 
 with col3:
     with st.container(border=True):
