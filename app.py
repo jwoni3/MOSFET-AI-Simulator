@@ -120,7 +120,6 @@ early_k = 1.0 / V_AF
 be_fwd = V_be > 0
 bc_fwd = V_bc > 0
 
-# 애니메이션 키 연동을 위한 모드 확장
 if be_fwd and not bc_fwd:
     mode       = "순방향 활성 영역"
     mode_en    = "Forward Active"
@@ -228,7 +227,6 @@ with top_col2:
 
 st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 
-# 하단 레이아웃 배치
 tab1, tab2, tab3 = st.tabs(["🔋 에너지 밴드 다이어그램", "📈 I_C–V_CE 특성 곡선", "🏃 캐리어 거동 애니메이션"])
 
 with tab1:
@@ -388,7 +386,7 @@ with tab2:
     st.plotly_chart(fig_iv, use_container_width=True)
 
 with tab3:
-    # 물리 법칙에 맞게 수정한 실시간 렌더링 애니메이션
+    # 갇힘 현상(Invisible Wall) 제거 및 동적 흐름 구현 애니메이션
     canvas_html = f"""
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 15px;">
         <canvas id="bjtCanvas" width="530" height="160"
@@ -405,46 +403,34 @@ with tab3:
         const MODE    = '{anim_key}';
         const BJT_TYPE = '{bjt_type}';
 
-        const N_e = 35;
-        const N_h = 35;
+        const N_e = 40;
+        const N_h = 40;
         let particles = [];
 
-        // 전자(Electron) 분포 초기화
+        // 화면 전체에 입자를 균등하게 뿌리고 시작 (병목/밀집 현상 원천 차단)
         for(let i=0; i<N_e; i++){{
-            let x;
-            if (BJT_TYPE === 'NPN') {{ // NPN의 다수 캐리어
-                x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
-            }} else {{ // PNP의 소수 캐리어
-                x = 160 + Math.random() * 200;
-            }}
             particles.push({{
-                x: x,
+                x: Math.random() * canvas.width,
                 y: 45 + Math.random() * 70,
                 r: 3.5,
-                type: 'electron'
+                type: 'electron',
+                dir: Math.random() < 0.5 ? 1 : -1 // 포화 상태의 양방향 흐름을 위해 미리 방향 속성 부여
             }});
         }}
-
-        // 정공(Hole) 분포 초기화
         for(let i=0; i<N_h; i++){{
-            let x;
-            if (BJT_TYPE === 'NPN') {{ // NPN의 소수 캐리어
-                x = 160 + Math.random() * 200;
-            }} else {{ // PNP의 다수 캐리어
-                x = Math.random() < 0.5 ? Math.random() * 160 : 360 + Math.random() * 170;
-            }}
             particles.push({{
-                x: x,
+                x: Math.random() * canvas.width,
                 y: 45 + Math.random() * 70,
                 r: 3.5,
-                type: 'hole'
+                type: 'hole',
+                dir: Math.random() < 0.5 ? 1 : -1
             }});
         }}
 
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 물리 접합면 시각화
+            // 물리 접합면
             [160, 360].forEach(x => {{
                 ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
                 ctx.setLineDash([4, 4]);
@@ -459,22 +445,20 @@ with tab3:
             ctx.fillText(labels[1], 195, 25);
             ctx.fillText(labels[2], 380, 25);
             
-            // 모드 해설
             if (MODE === 'forward_active') {{
                 ctx.fillStyle = '#f39c12'; ctx.font = '12px sans-serif';
-                ctx.fillText('순방향 활성: 다수 캐리어의 확산/표류 및 소수 캐리어 정상 주입', 110, canvas.height - 10);
+                ctx.fillText('순방향 활성: 다수 캐리어의 연속적인 흐름 및 소수 캐리어 확산', 110, canvas.height - 10);
             }} else if (MODE === 'reverse_active') {{
                 ctx.fillStyle = '#BB86FC'; ctx.font = '12px sans-serif';
-                ctx.fillText('역방향 활성: 컬렉터와 이미터 역할 교차, 역방향 캐리어 흐름', 110, canvas.height - 10);
+                ctx.fillText('역방향 활성: 흐름의 역전 (Collector → Emitter 방향 표류)', 110, canvas.height - 10);
             }} else if (MODE === 'saturation') {{
                 ctx.fillStyle = '#28a745'; ctx.font = '12px sans-serif';
-                ctx.fillText('포화: 양쪽(E, C)에서 베이스로 캐리어 주입 및 베이스에서 양방향 유출', 90, canvas.height - 10);
+                ctx.fillText('포화: 양쪽 장벽 소실로 캐리어가 양방향으로 막힘없이 범람(Flooding)함', 85, canvas.height - 10);
             }} else if (MODE === 'cutoff') {{
                 ctx.fillStyle = '#E74C3C'; ctx.font = '12px sans-serif';
-                ctx.fillText('차단: 양측 장벽이 높아 캐리어의 이동이 완벽히 차단됨', 115, canvas.height - 10);
+                ctx.fillText('차단: 거대한 장벽에 막혀 이동 불가 (단순 열진동 상태)', 115, canvas.height - 10);
             }}
             
-            // 입자 물리 렌더링 로직 (포화 모드 교차 주입 정확하게 수정)
             particles.forEach(p => {{
                 ctx.fillStyle = p.type === 'electron' ? '#00E6FF' : '#FF7043';
                 ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
@@ -484,67 +468,54 @@ with tab3:
                 let vx = 0;
                 let scatterX = 0.2;
                 
+                // 모드별 "뚫고 지나가는(Wrap-around)" 무한 스크롤 로직
                 if (MODE === 'forward_active') {{
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ vx = 3.2; scatterX = 0.3; }}
-                        else {{ // 베이스의 정공은 이미터로 역확산
-                            if(p.x > 160) vx = -0.8; else vx = -2.0; 
-                            scatterX = 0.5; 
-                        }} 
-                    }} else {{ // PNP
-                        if (p.type === 'hole') {{ vx = 3.2; scatterX = 0.3; }}
-                        else {{ 
-                            if(p.x > 160) vx = -0.8; else vx = -2.0;
-                            scatterX = 0.5; 
-                        }}
+                        if (p.type === 'electron') {{ vx = 3.5; if(p.x > canvas.width) p.x = 0; }}
+                        else {{ vx = -1.5; if(p.x < 0) p.x = 360; }} // 정공은 B->E 확산
+                    }} else {{
+                        if (p.type === 'hole') {{ vx = 3.5; if(p.x > canvas.width) p.x = 0; }}
+                        else {{ vx = -1.5; if(p.x < 0) p.x = 360; }}
                     }}
                 }} else if (MODE === 'saturation') {{
-                    scatterX = 0.6; // 불규칙 충돌 분산도
+                    // 포화 상태의 핵심: 양쪽에서 쏟아지고 서로 스쳐 지나가며 전체를 채움
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{
-                            // 전자는 이미터와 컬렉터 양쪽에서 베이스로 맹렬히 진입
-                            if (p.x < 160) vx = 2.0; 
-                            else if (p.x > 360) vx = -2.0;
-                            else vx = (Math.random() - 0.5) * 1.5; // 베이스 내부에서의 충돌 축적
+                        if (p.type === 'electron') {{ 
+                            vx = p.dir * 3.0; // 절반은 왼쪽으로, 절반은 오른쪽으로 맹렬히 돌진
+                            if(vx > 0 && p.x > canvas.width) p.x = 0;
+                            if(vx < 0 && p.x < 0) p.x = canvas.width;
                         }} else {{
-                            // 베이스의 정공은 이미터와 컬렉터 양쪽 밖으로 밀려 나감
-                            if (p.x >= 160 && p.x < 260) vx = -1.2;
-                            else if (p.x >= 260 && p.x <= 360) vx = 1.2;
-                            else vx = (Math.random() - 0.5) * 1.5;
+                            vx = p.dir * 1.5; // 정공도 베이스에서 뿜어져 나와 양쪽으로 퍼짐
+                            if(vx > 0 && p.x > canvas.width) p.x = 260; // 나간 정공은 베이스 중심에서 리스폰
+                            if(vx < 0 && p.x < 0) p.x = 260;
                         }}
-                    }} else {{ // PNP
-                        if (p.type === 'hole') {{
-                            if (p.x < 160) vx = 2.0; 
-                            else if (p.x > 360) vx = -2.0;
-                            else vx = (Math.random() - 0.5) * 1.5;
+                    }} else {{
+                        if (p.type === 'hole') {{ 
+                            vx = p.dir * 3.0;
+                            if(vx > 0 && p.x > canvas.width) p.x = 0;
+                            if(vx < 0 && p.x < 0) p.x = canvas.width;
                         }} else {{
-                            if (p.x >= 160 && p.x < 260) vx = -1.2;
-                            else if (p.x >= 260 && p.x <= 360) vx = 1.2;
-                            else vx = (Math.random() - 0.5) * 1.5;
+                            vx = p.dir * 1.5;
+                            if(vx > 0 && p.x > canvas.width) p.x = 260;
+                            if(vx < 0 && p.x < 0) p.x = 260;
                         }}
                     }}
                 }} else if (MODE === 'reverse_active') {{
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ vx = -2.5; scatterX = 0.3; }}
-                        else {{ vx = 0.8; scatterX = 0.4; }}
+                        if (p.type === 'electron') {{ vx = -3.5; if(p.x < 0) p.x = canvas.width; }}
+                        else {{ vx = 1.5; if(p.x > canvas.width) p.x = 160; }} // 정공은 B->C
                     }} else {{
-                        if (p.type === 'hole') {{ vx = -2.5; scatterX = 0.3; }}
-                        else {{ vx = 0.8; scatterX = 0.4; }}
+                        if (p.type === 'hole') {{ vx = -3.5; if(p.x < 0) p.x = canvas.width; }}
+                        else {{ vx = 1.5; if(p.x > canvas.width) p.x = 160; }}
                     }}
+                }} else if (MODE === 'cutoff') {{
+                    vx = 0;
+                    scatterX = 0.5; // 제자리 진동만
                 }}
                 
-                // 위치 이동 및 벽 통과 시 리스폰 처리
+                // 적용 및 Y축 이탈 방지
                 p.x += vx + (Math.random() - 0.5) * scatterX;
-                p.y += (Math.random() - 0.5) * 0.4;
-                
-                if (MODE === 'saturation') {{
-                    // 포화 상태에서 양방향으로 나간 입자가 반대편에서 재주입되는 루프
-                    if (p.x > canvas.width) p.x = 0;
-                    if (p.x < 0) p.x = canvas.width;
-                }} else {{
-                    if (vx > 0 && p.x > canvas.width) p.x = 0;
-                    if (vx < 0 && p.x < 0) p.x = canvas.width;
-                }}
+                p.y += (Math.random() - 0.5) * 0.5;
                 
                 if (p.y < 35) p.y = 135;
                 if (p.y > 135) p.y = 35;
