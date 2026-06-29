@@ -37,7 +37,7 @@ st.markdown("""
     /* 플롯 여백 최소화 */
     .stPlotlyChart { margin: 0 !important; padding: 0 !important; }
 
-    /* 전체 페이지 상단 여백 확보 */
+    /* 전체 페이지 상단 여백 확보 및 제목 위아래 정렬 최적화 */
     .block-container { padding-top: 2rem !important; padding-bottom: 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -221,10 +221,15 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 
 # ════════════════════════════════════════════════
-# 레이아웃: 상단 3컬럼 (stat | BJT구조+애니 | AI)
+# 레이아웃: 메인 타이틀 & 상단 3컬럼 (stat | BJT구조+애니 | AI)
 # ════════════════════════════════════════════════
-# 타이틀 가운데 정렬 및 폰트 크기 증대 (2.2rem)
-st.markdown("<h2 style='text-align:center; margin:0 0 16px 0; font-size:2.2rem; font-weight:800; color:#1e293b;'>📟 BJT 물리 & 특성 시뮬레이터</h2>", unsafe_allow_html=True)
+
+# 요청사항 반영: 스크린샷과 유사하게 왼쪽 정렬 + 영문 타이틀 + 하단 구분선
+st.markdown(f"""
+<h1 style='text-align:left; font-size:2.4rem; font-weight:900; color:#1e293b; margin-top:0; padding-bottom:12px; border-bottom:1px solid #e2e8f0; margin-bottom: 24px;'>
+    🔌 {bjt_type} BJT SIMULATOR
+</h1>
+""", unsafe_allow_html=True)
 
 col_stat, col_anim, col_ai = st.columns([0.25, 0.42, 0.33])
 
@@ -263,7 +268,7 @@ with col_stat:
     </div>
     """, unsafe_allow_html=True)
 
-# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션 (컬러 완벽 반영)
+# ── 가운데: BJT 구조 그림 + 캐리어 애니메이션
 with col_anim:
     canvas_html = f"""
 <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
@@ -326,7 +331,7 @@ with col_anim:
         ctx.fillStyle='{b_fg}'; ctx.fillText(labels[1], 148, 22);
         ctx.fillStyle='{c_fg}'; ctx.fillText(labels[2], 308, 22);
 
-        // 입자 애니메이션 (전자 청록, 정공 주황)
+        // 입자 애니메이션
         particles.forEach(p => {{
             ctx.fillStyle   = p.type==='electron' ? '#06b6d4' : '#f97316';
             ctx.shadowBlur  = 4; ctx.shadowColor = ctx.fillStyle;
@@ -389,7 +394,6 @@ with col_anim:
 }})();
 </script>
 """
-    # 넉넉한 공간 부여
     components.html(canvas_html, height=450)
 
 # ── 오른쪽: AI 분석
@@ -437,7 +441,7 @@ st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 # ════════════════════════════════════════════════
 col_band, col_iv = st.columns(2)
 
-# ── 에너지 밴드 다이어그램 (파스텔 컬러 + layer="below" 적용으로 선명도 확보)
+# ── 에너지 밴드 다이어그램
 with col_band:
     st.markdown("<span style='font-size:0.9rem; font-weight:800; color:#334155;'>🔋 에너지 밴드 다이어그램</span>", unsafe_allow_html=True)
     fig_band = go.Figure()
@@ -480,7 +484,7 @@ with col_band:
     fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor=c_bg_b, line_width=0, layer="below")
     fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor=c_bg_c, line_width=0, layer="below")
     
-    # 밴드 선 색상을 좀 더 진하게 (선명하게) 수정
+    # 밴드 선 색상을 좀 더 진하게
     fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_c'))
     fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_v'))
     
@@ -524,14 +528,14 @@ with col_band:
     )
     st.plotly_chart(fig_band, use_container_width=True)
 
-# ── I_C–V_CE 특성 곡선 (오렌지 톤 적용)
+# ── I_C–V_CE 특성 곡선
 with col_iv:
     st.markdown("<span style='font-size:0.9rem; font-weight:800; color:#334155;'>📈 I_C - V_CE 특성 곡선 & 직류 부하선</span>", unsafe_allow_html=True)
     fig_iv = go.Figure()
     sign       = 1 if bjt_type=="NPN" else -1
     v_arr      = np.linspace(0, V_CC+0.8, 300)
     ib_list    = [10,20,30,40,50]
-    base_color = (249, 115, 22) if bjt_type=="NPN" else (168, 85, 247) # 오렌지 톤
+    base_color = (249, 115, 22) if bjt_type=="NPN" else (168, 85, 247)
 
     for idx, ib_uA in enumerate(ib_list):
         ib_A   = ib_uA*1e-6
