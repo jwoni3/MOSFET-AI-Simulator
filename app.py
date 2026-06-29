@@ -437,7 +437,7 @@ st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
 # ════════════════════════════════════════════════
 col_band, col_iv = st.columns(2)
 
-# ── 에너지 밴드 다이어그램 (파스텔 컬러 적용)
+# ── 에너지 밴드 다이어그램 (파스텔 컬러 + layer="below" 적용으로 선명도 확보)
 with col_band:
     st.markdown("<span style='font-size:0.9rem; font-weight:800; color:#334155;'>🔋 에너지 밴드 다이어그램</span>", unsafe_allow_html=True)
     fig_band = go.Figure()
@@ -471,23 +471,25 @@ with col_band:
     ev_all = ec_all - E_g
 
     # 배경색 매핑 (파스텔)
-    c_bg_e = "rgba(224,242,254,0.7)" if bjt_type=="NPN" else "rgba(255,228,230,0.7)"
-    c_bg_b = "rgba(255,228,230,0.7)" if bjt_type=="NPN" else "rgba(224,242,254,0.7)"
-    c_bg_c = "rgba(220,252,231,0.7)" if bjt_type=="NPN" else "rgba(252,231,243,0.7)"
+    c_bg_e = "rgba(224,242,254,0.8)" if bjt_type=="NPN" else "rgba(255,228,230,0.8)"
+    c_bg_b = "rgba(255,228,230,0.8)" if bjt_type=="NPN" else "rgba(224,242,254,0.8)"
+    c_bg_c = "rgba(220,252,231,0.8)" if bjt_type=="NPN" else "rgba(252,231,243,0.8)"
 
-    fig_band.add_vrect(x0=0,   x1=2.8, fillcolor=c_bg_e, line_width=0)
-    fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor=c_bg_b, line_width=0)
-    fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor=c_bg_c, line_width=0)
+    # layer="below" 추가하여 배경색이 선명도를 저하시키는 현상 방지
+    fig_band.add_vrect(x0=0,   x1=2.8, fillcolor=c_bg_e, line_width=0, layer="below")
+    fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor=c_bg_b, line_width=0, layer="below")
+    fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor=c_bg_c, line_width=0, layer="below")
     
-    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#1e293b',width=3), name='E_c'))
-    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#1e293b',width=3), name='E_v'))
+    # 밴드 선 색상을 좀 더 진하게 (선명하게) 수정
+    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_c'))
+    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_v'))
     
-    fig_band.add_trace(go.Scatter(x=[0,2.4],   y=[E_F_Emitter,E_F_Emitter],   mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(E)'))
-    fig_band.add_trace(go.Scatter(x=[3.2,4.8], y=[E_F_Base,E_F_Base],         mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(B)'))
-    fig_band.add_trace(go.Scatter(x=[5.6,8.0], y=[E_F_Collector,E_F_Collector],mode='lines', line=dict(color='blue',width=2.5,dash='dash'), name='E_F(C)'))
+    fig_band.add_trace(go.Scatter(x=[0,2.4],   y=[E_F_Emitter,E_F_Emitter],   mode='lines', line=dict(color='#3b82f6',width=2.5,dash='dash'), name='E_F(E)'))
+    fig_band.add_trace(go.Scatter(x=[3.2,4.8], y=[E_F_Base,E_F_Base],         mode='lines', line=dict(color='#3b82f6',width=2.5,dash='dash'), name='E_F(B)'))
+    fig_band.add_trace(go.Scatter(x=[5.6,8.0], y=[E_F_Collector,E_F_Collector],mode='lines', line=dict(color='#3b82f6',width=2.5,dash='dash'), name='E_F(C)'))
     
-    fig_band.add_annotation(x=8.15, y=ec_all[-1], text="<b>E_c</b>", showarrow=False, font=dict(size=12,color='black'))
-    fig_band.add_annotation(x=8.15, y=ev_all[-1], text="<b>E_v</b>", showarrow=False, font=dict(size=12,color='black'))
+    fig_band.add_annotation(x=8.15, y=ec_all[-1], text="<b>E_c</b>", showarrow=False, font=dict(size=12,color='#0f172a'))
+    fig_band.add_annotation(x=8.15, y=ev_all[-1], text="<b>E_v</b>", showarrow=False, font=dict(size=12,color='#0f172a'))
 
     fig_band.add_annotation(x=1.4, y=max(ec_all)+0.5, text=f"<b>EMITTER ({e_txt})</b>", showarrow=False, font=dict(size=11,color=e_fg))
     fig_band.add_annotation(x=4.0, y=max(ec_all)+0.5, text=f"<b>BASE ({b_txt})</b>", showarrow=False, font=dict(size=11,color=b_fg))
