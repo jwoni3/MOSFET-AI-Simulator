@@ -264,7 +264,7 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 
 # ════════════════════════════════════════════════
-# 레이아웃: 메인 타이틀 & 3단 컬럼 배치 (스크린샷 매칭)
+# 레이아웃: 메인 타이틀 & 3단 컬럼 배치
 # ════════════════════════════════════════════════
 
 st.markdown(f"""
@@ -425,7 +425,7 @@ with col1:
 
 # ── 2열: 그래프 모음 (I-V & 밴드)
 with col2:
-    st.markdown("<div class='section-header'>📈 특성 곡선 & 밴드 다이어그램</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>📈 특성 곡선 & 에너지 밴드 다이어그램</div>", unsafe_allow_html=True)
     
     # ── I_C–V_CE 특성 곡선
     fig_iv = go.Figure()
@@ -459,7 +459,6 @@ with col2:
         textposition="top left" if bjt_type=="NPN" else "bottom right", 
         textfont=dict(size=11,color='#dc2626',weight='bold'), name="Q점"))
     
-    # [수정] 폰트 크기를 줄이고 y 파라미터를 제거하여 자동 정렬되도록 하여 윗부분 잘림 방지. margin t(상단)도 50으로 확보
     fig_iv.update_layout(
         title=dict(text="<b>I-V Characteristic Curve</b>", font=dict(size=13, color="black"), x=0.5, xanchor="center"),
         xaxis_title="V_CE [V]", yaxis_title="I_C [mA]",
@@ -472,7 +471,7 @@ with col2:
     )
     st.plotly_chart(fig_iv, use_container_width=True)
 
-    # ── 에너지 밴드 다이어그램 (물리적 오류 완전 수정)
+    # ── 에너지 밴드 다이어그램
     fig_band = go.Figure()
     E_g = 1.12
     x_all = np.linspace(0, 8.0, 400)
@@ -485,13 +484,11 @@ with col2:
         E_F_Base = 0.0; E_V_Base = -0.1; E_C_Base = E_V_Base + E_g
         E_F_Emitter = E_F_Base + v_be_eff; E_F_Collector = E_F_Base + v_bc_eff
         E_C_Emitter = E_F_Emitter - 0.05
-        # 물리적 수정: N형 Collector는 E_C가 E_F보다 살짝 위쪽에 있어야 함
         E_C_Collector = E_F_Collector + 0.15 
     else:
         E_F_Base = 0.0; E_C_Base = 0.1; E_V_Base = E_C_Base - E_g
         E_F_Emitter = E_F_Base - v_be_eff; E_F_Collector = E_F_Base - v_bc_eff
         E_V_Emitter = E_F_Emitter + 0.05
-        # 물리적 수정: P형 Collector는 E_V가 E_F보다 살짝 아래쪽에 있어야 함
         E_V_Collector = E_F_Collector - 0.15 
         E_C_Emitter = E_V_Emitter + E_g
         E_C_Collector = E_V_Collector + E_g
@@ -542,7 +539,6 @@ with col2:
     fig_band.add_vline(x=2.8, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     fig_band.add_vline(x=5.2, line=dict(color='#94a3b8',width=1.5,dash='dot'))
     
-    # [수정] 폰트 크기를 줄이고 자동 정렬되도록 조정. margin t(상단)도 50으로 확보
     fig_band.update_layout(
         title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=13, color="black"), x=0.5, xanchor="center"),
         xaxis=dict(visible=False, range=[-0.2,8.6]),
@@ -581,12 +577,13 @@ with col3:
         else:
             st.error("GEMINI_API_KEY가 설정되지 않았습니다.")
     else:
-        # [수정] 안내 메시지 박스를 첨부된 사진과 동일한 디자인으로 변경
+        # [수정] 원본 캡처 이미지와 완벽하게 동일한 배경색, 글자색 및 정렬 스타일 적용
         st.markdown(f"""
-        <div style='background-color:#eff4f9; padding: 18px 20px; border-radius: 8px;
-                    font-size: 0.95rem; font-weight: 500; color: #1e5a8f;
-                    display: flex; align-items: center; gap: 10px; border: none;'>
-            <span style='font-size: 1.2rem;'>👈</span>
-            <span style='line-height: 1.5;'>왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 보기] 버튼을 눌러보세요.</span>
+        <div style='background-color: #eef5fb; padding: 16px 18px; border-radius: 6px;
+                    font-size: 0.95rem; color: #165d9d; display: flex; align-items: flex-start; gap: 8px;'>
+            <div style='font-size: 1.1rem; margin-top: -2px;'>👈</div>
+            <div style='line-height: 1.6; font-weight: 500; letter-spacing: -0.2px;'>
+                왼쪽 패널에서 설정을 마치고 [AI 실시간<br>해설 보기] 버튼을 눌러보세요.
+            </div>
         </div>
         """, unsafe_allow_html=True)
