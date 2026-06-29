@@ -4,7 +4,7 @@ import numpy as np
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 사이드바 컴팩트화 및 회색 바 제거를 위한 CSS 최적화
+# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일
 st.markdown("""
 <style>
     /* 사이드바 내부 요소 촘촘하게 줄여서 스크롤 없애기 */
@@ -31,17 +31,17 @@ st.markdown("""
         margin-bottom: -5px !important;
     }
     
-    /* 넘버인풋 회색 배경(바) 제거 및 폰트 축소 */
+    /* 넘버인풋 배경 전체를 깔끔한 흰색으로 통일 */
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"],
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] {
-        background-color: transparent !important; /* 회색 바 제거 */
+        background-color: #ffffff !important; 
     }
     [data-testid="stSidebar"] .stNumberInput input {
         height: 26px !important;
         padding: 1px 4px !important;
         font-size: 0.75rem !important;
         color: #2c3e50 !important;
-        background-color: transparent !important; /* 입력창 내부 배경 투명화 */
+        background-color: #ffffff !important; /* 텍스트 입력 부분도 흰색으로 */
     }
     
     /* 텍스트 영역 높이 조절 */
