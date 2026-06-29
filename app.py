@@ -35,11 +35,13 @@ st.markdown("""
         height: 26px !important;
         padding: 1px 4px !important;
         font-size: 0.75rem !important;
+        color: #2c3e50 !important; /* 입력창 내부 글씨 진하게 */
     }
     /* 텍스트 영역 높이 조절 */
     [data-testid="stSidebar"] .stTextArea textarea {
         font-size: 0.78rem !important;
         padding: 5px !important;
+        color: #2c3e50 !important;
     }
     /* 라디오 버튼 배치 축소 */
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
@@ -68,7 +70,7 @@ with st.sidebar:
     bjt_type = st.radio("소자 타입", ["NPN", "PNP"], horizontal=True, label_visibility="collapsed")
 
     st.markdown("---")
-    st.markdown("<span style='font-size:0.78rem; font-weight:700;'>접합 전압 인가</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>접합 전압 인가</span>", unsafe_allow_html=True)
 
     if "v_be_val" not in st.session_state: st.session_state.v_be_val = 0.75
     if "v_bc_val" not in st.session_state: st.session_state.v_bc_val = -2.0
@@ -78,9 +80,9 @@ with st.sidebar:
     def update_bc_slider(): st.session_state.v_bc_val = st.session_state.bc_num
     def update_bc_num():    st.session_state.bc_num   = st.session_state.v_bc_val
 
-    # V_BE 범위를 -1.0부터 1.0까지로 대폭 수정
+    # 오류 수정: 색상을 밝은 회색에서 진한 남색/검정 계열로 변경
     label_be = "V_BE (V)" if bjt_type == "NPN" else "V_EB (V)"
-    st.markdown(f"<span style='font-size:0.75rem; font-weight:600; color:#cbd5e1;'>{label_be}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='font-size:0.75rem; font-weight:700; color:#2c3e50;'>{label_be}</span>", unsafe_allow_html=True)
     V_be = st.slider(label_be, min_value=-1.0, max_value=1.0, step=0.05,
                      key="v_be_val", on_change=update_be_num, label_visibility="collapsed")
     st.number_input(label_be, min_value=-1.0, max_value=1.0, step=0.05,
@@ -88,7 +90,7 @@ with st.sidebar:
                     value=st.session_state.v_be_val, label_visibility="collapsed")
 
     label_bc = "V_BC (V)" if bjt_type == "NPN" else "V_CB (V)"
-    st.markdown(f"<span style='font-size:0.75rem; font-weight:600; color:#cbd5e1; margin-top:2px; display:block;'>{label_bc}</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='font-size:0.75rem; font-weight:700; color:#2c3e50; margin-top:2px; display:block;'>{label_bc}</span>", unsafe_allow_html=True)
     V_bc = st.slider(label_bc, min_value=-5.0, max_value=5.0, step=0.1,
                      key="v_bc_val", on_change=update_bc_num, label_visibility="collapsed")
     st.number_input(label_bc, min_value=-5.0, max_value=5.0, step=0.1,
@@ -96,7 +98,7 @@ with st.sidebar:
                     value=st.session_state.v_bc_val, label_visibility="collapsed")
 
     st.markdown("---")
-    st.markdown("<span style='font-size:0.78rem; font-weight:700;'>💬 AI 질문</span>", unsafe_allow_html=True)
+    st.markdown("<span style='font-size:0.8rem; font-weight:700; color:#1e293b;'>💬 AI 질문</span>", unsafe_allow_html=True)
     user_question = st.text_area("질문 입력", height=50, label_visibility="collapsed",
                                  value="현재 바이어스 상태가 증폭기로서 왜 적합한지 밴드 다이어그램 관점에서 설명해줘.",
                                  placeholder="e.g. 현재 바이어스 상태를 물리적으로 설명해줘.")
@@ -146,7 +148,7 @@ q_ic_mA = q_ic_A * 1000
 st.markdown(f"<h3 style='margin-bottom:2px; margin-top:0px;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
 st.markdown("<hr style='margin:2px 0 10px 0;'>", unsafe_allow_html=True)
 
-# 상단 대시보드 레이아웃 개편: 좌측(동작 모드 소자 상태) / 우측(AI 실시간 해설 단독 배치)
+# 상단 대시보드 레이아웃: 좌측(동작 모드 소자 상태) / 우측(AI 실시간 해설 단독 배치)
 top_col1, top_col2 = st.columns([0.45, 0.55])
 
 with top_col1:
@@ -178,7 +180,6 @@ with top_col1:
     """, unsafe_allow_html=True)
 
 with top_col2:
-    # 소자 상태 바로 우측 공간에 고정 배치되는 AI 분석창
     if ai_btn:
         system_instruction = f"""
 당신은 반도체 소자 물리학 및 증폭 회로 설계 전문가입니다.
@@ -204,7 +205,7 @@ with top_col2:
             st.error("GEMINI_API_KEY가 설정되지 않았습니다.")
     else:
         st.markdown("""
-        <div style='background:#f8f9fa; padding:14px; border-radius:12px; border:1px solid #eaeaea; font-size:0.85rem; height:155px; color:#95a5a6; display:flex; align-items:center; justify-content:center; text-align:center;'>
+        <div style='background:#f8f9fa; padding:14px; border-radius:12px; border:1px solid #eaeaea; font-size:0.85rem; height:155px; color:#64748b; display:flex; align-items:center; justify-content:center; text-align:center;'>
             사이드바 하단의 '🚀 Gemini 분석 요청' 버튼을 누르면<br>이 자리에 물리 밴드 관점의 상세 해설이 실시간 매핑됩니다.
         </div>
         """, unsafe_allow_html=True)
