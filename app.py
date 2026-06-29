@@ -4,7 +4,7 @@ import numpy as np
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 사이드바 컴팩트화 및 레이아웃을 위한 CSS 최적화
+# 사이드바 컴팩트화 및 회색 바 제거를 위한 CSS 최적화
 st.markdown("""
 <style>
     /* 사이드바 내부 요소 촘촘하게 줄여서 스크롤 없애기 */
@@ -30,13 +30,20 @@ st.markdown("""
         margin-top: -15px !important;
         margin-bottom: -5px !important;
     }
-    /* 넘버인풋 높이 및 폰트 축소 */
+    
+    /* 넘버인풋 회색 배경(바) 제거 및 폰트 축소 */
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"],
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] {
+        background-color: transparent !important; /* 회색 바 제거 */
+    }
     [data-testid="stSidebar"] .stNumberInput input {
         height: 26px !important;
         padding: 1px 4px !important;
         font-size: 0.75rem !important;
-        color: #2c3e50 !important; /* 입력창 내부 글씨 진하게 */
+        color: #2c3e50 !important;
+        background-color: transparent !important; /* 입력창 내부 배경 투명화 */
     }
+    
     /* 텍스트 영역 높이 조절 */
     [data-testid="stSidebar"] .stTextArea textarea {
         font-size: 0.78rem !important;
@@ -80,7 +87,6 @@ with st.sidebar:
     def update_bc_slider(): st.session_state.v_bc_val = st.session_state.bc_num
     def update_bc_num():    st.session_state.bc_num   = st.session_state.v_bc_val
 
-    # 오류 수정: 색상을 밝은 회색에서 진한 남색/검정 계열로 변경
     label_be = "V_BE (V)" if bjt_type == "NPN" else "V_EB (V)"
     st.markdown(f"<span style='font-size:0.75rem; font-weight:700; color:#2c3e50;'>{label_be}</span>", unsafe_allow_html=True)
     V_be = st.slider(label_be, min_value=-1.0, max_value=1.0, step=0.05,
