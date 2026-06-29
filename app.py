@@ -5,10 +5,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(layout="wide", page_title="BJT 시뮬레이터")
 
-# 사이드바 컴팩트화 및 숫자 입력창 흰색 배경 통일
 st.markdown("""
 <style>
-    /* 사이드바 내부 요소 촘촘하게 줄여서 스크롤 없애기 */
     [data-testid="stSidebar"] {
         min-width: 250px;
         max-width: 250px;
@@ -26,16 +24,13 @@ st.markdown("""
     [data-testid="stSidebar"] hr {
         margin: 6px 0 !important;
     }
-    /* 슬라이더 간격 극대 축소 */
     [data-testid="stSidebar"] .stSlider {
         margin-top: -15px !important;
         margin-bottom: -5px !important;
     }
-    
-    /* 넘버인풋 배경 전체를 깔끔한 흰색으로 통일 */
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"],
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="base-input"] {
-        background-color: #ffffff !important; 
+        background-color: #ffffff !important;
     }
     [data-testid="stSidebar"] .stNumberInput input {
         height: 26px !important;
@@ -44,17 +39,13 @@ st.markdown("""
         color: #2c3e50 !important;
         background-color: #ffffff !important;
     }
-    
-    /* 텍스트 영역 높이 조절 */
     [data-testid="stSidebar"] .stTextArea textarea {
         font-size: 0.78rem !important;
         padding: 5px !important;
         color: #2c3e50 !important;
     }
-    /* 라디오 버튼 배치 축소 */
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
 
-    /* 메인 대시보드 카드 스타일 */
     .stat-card {
         background: #ffffff;
         border-radius: 12px;
@@ -123,22 +114,22 @@ bc_fwd = V_bc > 0
 if be_fwd and not bc_fwd:
     mode       = "순방향 활성 영역"
     mode_en    = "Forward Active"
-    mode_color = "#f39c12" 
+    mode_color = "#f39c12"
     anim_key   = "forward_active"
 elif be_fwd and bc_fwd:
     mode       = "포화 영역"
     mode_en    = "Saturation"
-    mode_color = "#28a745" 
+    mode_color = "#28a745"
     anim_key   = "saturation"
 elif not be_fwd and bc_fwd:
     mode       = "역방향 활성 영역"
     mode_en    = "Reverse Active"
-    mode_color = "#9b59b6" 
+    mode_color = "#9b59b6"
     anim_key   = "reverse_active"
 else:
     mode       = "차단 영역"
     mode_en    = "Cutoff"
-    mode_color = "#dc3545" 
+    mode_color = "#dc3545"
     anim_key   = "cutoff"
 
 mode_full = f"{mode} ({mode_en})"
@@ -160,10 +151,99 @@ else:
 
 q_ic_mA = q_ic_A * 1000
 
+# ── 모드별 색상 및 설명 (Python 단에서 미리 계산)
+mode_color_map = {
+    "forward_active": "#f39c12",
+    "saturation":     "#28a745",
+    "reverse_active": "#9b59b6",
+    "cutoff":         "#dc3545",
+}
+mode_desc_map = {
+    "forward_active": "순방향 활성: 다수 캐리어의 연속적인 흐름 및 소수 캐리어 확산",
+    "saturation":     "포화: 양쪽 장벽 소실로 캐리어가 양방향으로 막힘없이 범람(Flooding)함",
+    "reverse_active": "역방향 활성: 흐름의 역전 (Collector → Emitter 방향 표류)",
+    "cutoff":         "차단: 거대한 장벽에 막혀 이동 불가 (단순 열진동 상태)",
+}
+desc_color  = mode_color_map[anim_key]
+desc_text   = mode_desc_map[anim_key]
+
+# ── BJT 구조 SVG (NPN/PNP)
+if bjt_type == "NPN":
+    e_fill, e_stroke, e_label = "#1a3a5c", "#3a7abf", "N⁺"
+    b_fill, b_stroke, b_label, b_tcolor = "#4a1a3a", "#bf3a8a", "P", "#f9c"
+    c_fill, c_stroke, c_label = "#1a3a1a", "#3abf3a", "N"
+    vbe_label, vbc_label = f"V_BE={V_be:.2f}V", f"V_BC={V_bc:.2f}V"
+    vbe_color, vbc_color = "#7ac", "#7ca"
+else:
+    e_fill, e_stroke, e_label = "#5c1a1a", "#bf3a3a", "P⁺"
+    b_fill, b_stroke, b_label, b_tcolor = "#1a3a2a", "#3abf6a", "N", "#9fc"
+    c_fill, c_stroke, c_label = "#3a2a1a", "#bf8a3a", "P"
+    vbe_label, vbc_label = f"V_EB={V_be:.2f}V", f"V_CB={V_bc:.2f}V"
+    vbe_color, vbc_color = "#ca7", "#a7c"
+
+bjt_svg = f"""
+<svg width="530" height="95" style="display:block;">
+  <defs>
+    <marker id="arrE" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#aaa" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Emitter 블록 -->
+  <rect x="60" y="22" width="110" height="52" rx="4"
+        fill="{e_fill}" stroke="{e_stroke}" stroke-width="1.5"/>
+  <text x="115" y="44" text-anchor="middle"
+        fill="#cde" font-size="13" font-family="monospace" font-weight="bold">{e_label}</text>
+  <text x="115" y="62" text-anchor="middle"
+        fill="#9ab" font-size="10" font-family="monospace">Emitter</text>
+
+  <!-- Base 블록 -->
+  <rect x="195" y="22" width="80" height="52" rx="0"
+        fill="{b_fill}" stroke="{b_stroke}" stroke-width="1.5"/>
+  <text x="235" y="44" text-anchor="middle"
+        fill="{b_tcolor}" font-size="13" font-family="monospace" font-weight="bold">{b_label}</text>
+  <text x="235" y="62" text-anchor="middle"
+        fill="#9ab" font-size="10" font-family="monospace">Base</text>
+
+  <!-- Collector 블록 -->
+  <rect x="300" y="22" width="110" height="52" rx="4"
+        fill="{c_fill}" stroke="{c_stroke}" stroke-width="1.5"/>
+  <text x="355" y="44" text-anchor="middle"
+        fill="#cec" font-size="13" font-family="monospace" font-weight="bold">{c_label}</text>
+  <text x="355" y="62" text-anchor="middle"
+        fill="#9ab" font-size="10" font-family="monospace">Collector</text>
+
+  <!-- E 단자 -->
+  <line x1="20" y1="48" x2="58" y2="48" stroke="#aaa" stroke-width="1.5" marker-end="url(#arrE)"/>
+  <text x="10" y="52" text-anchor="middle" fill="#ddd"
+        font-size="13" font-family="monospace" font-weight="bold">E</text>
+
+  <!-- B 단자 (아래로) -->
+  <line x1="235" y1="74" x2="235" y2="85" stroke="#aaa" stroke-width="1.5"/>
+  <text x="235" y="94" text-anchor="middle" fill="#ddd"
+        font-size="13" font-family="monospace" font-weight="bold">B</text>
+
+  <!-- C 단자 -->
+  <line x1="410" y1="48" x2="450" y2="48" stroke="#aaa" stroke-width="1.5"/>
+  <text x="462" y="52" text-anchor="middle" fill="#ddd"
+        font-size="13" font-family="monospace" font-weight="bold">C</text>
+
+  <!-- V_BE / V_BC 수치 표시 -->
+  <text x="148" y="15" text-anchor="middle"
+        fill="{vbe_color}" font-size="10" font-family="monospace">{vbe_label}</text>
+  <text x="323" y="15" text-anchor="middle"
+        fill="{vbc_color}" font-size="10" font-family="monospace">{vbc_label}</text>
+
+  <!-- BJT 타입 라벨 -->
+  <text x="478" y="38" fill="#ccc" font-size="13" font-family="monospace" font-weight="bold">{bjt_type}</text>
+  <text x="478" y="54" fill="#888" font-size="10" font-family="monospace">BJT</text>
+</svg>
+"""
+
 st.markdown(f"<h3 style='margin-bottom:2px; margin-top:0px;'>📟 BJT 물리 & 특성 시뮬레이터</h3>", unsafe_allow_html=True)
 st.markdown("<hr style='margin:2px 0 10px 0;'>", unsafe_allow_html=True)
 
-# 상단 대시보드 레이아웃
 top_col1, top_col2 = st.columns([0.45, 0.55])
 
 with top_col1:
@@ -235,7 +315,7 @@ with tab1:
     E_g = 1.12
     x_all = np.linspace(0, 8.0, 400)
     ec_all = np.zeros_like(x_all)
-    
+
     v_be_eff = float(np.clip(V_be, -5.0, 0.75))
     v_bc_eff = float(np.clip(V_bc, -5.0, 0.75))
 
@@ -243,20 +323,20 @@ with tab1:
         E_F_Base = 0.0
         E_V_Base = -0.1
         E_C_Base = E_V_Base + E_g
-        
+
         E_F_Emitter = E_F_Base + v_be_eff
         E_F_Collector = E_F_Base + v_bc_eff
-        
+
         E_C_Emitter = E_F_Emitter - 0.05
         E_C_Collector = E_F_Collector - 0.15
-    else: # PNP
+    else:
         E_F_Base = 0.0
         E_C_Base = 0.1
         E_V_Base = E_C_Base - E_g
-        
+
         E_F_Emitter = E_F_Base - v_be_eff
         E_F_Collector = E_F_Base - v_bc_eff
-        
+
         E_V_Emitter = E_F_Emitter + 0.05
         E_V_Collector = E_F_Collector + 0.15
         E_C_Emitter = E_V_Emitter + E_g
@@ -269,13 +349,13 @@ with tab1:
             ec_all[i] = E_C_Collector
         elif 3.2 <= x <= 4.8:
             ec_all[i] = E_C_Base
-        elif 2.4 < x < 3.2: 
+        elif 2.4 < x < 3.2:
             t = (x - 2.4) / 0.8 * np.pi
             ec_all[i] = E_C_Emitter + (E_C_Base - E_C_Emitter) * (1 - np.cos(t)) / 2
-        elif 4.8 < x < 5.6: 
+        elif 4.8 < x < 5.6:
             t = (x - 4.8) / 0.8 * np.pi
             ec_all[i] = E_C_Base + (E_C_Collector - E_C_Base) * (1 - np.cos(t)) / 2
-            
+
     ev_all = ec_all - E_g
 
     fig_band.add_vrect(x0=0,   x1=2.8, fillcolor="rgba(173,216,230,0.25)", line_width=0)
@@ -386,141 +466,147 @@ with tab2:
     st.plotly_chart(fig_iv, use_container_width=True)
 
 with tab3:
-    # 갇힘 현상(Invisible Wall) 제거 및 동적 흐름 구현 애니메이션
     canvas_html = f"""
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 15px;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding-top:15px;">
+
+        <!-- BJT 구조 그림 -->
+        {bjt_svg}
+
+        <!-- 캐리어 거동 애니메이션 캔버스 -->
         <canvas id="bjtCanvas" width="530" height="160"
-                style="background:#2d2d2d; border-radius:8px; display:block; box-shadow: 0px 4px 10px rgba(0,0,0,0.15);"></canvas>
-        <p style="color:#aaa; font-size:0.82rem; margin:10px 0 0 0; font-family: sans-serif; text-align: center;">
-            <span style="color:#00E6FF; font-weight: bold;">● 전자 (Electron)</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-            <span style="color:#FF7043; font-weight: bold;">● 정공 (Hole)</span>
+                style="background:#2d2d2d; border-radius:8px; display:block;
+                       box-shadow:0px 4px 10px rgba(0,0,0,0.15);"></canvas>
+
+        <!-- 범례 -->
+        <p style="color:#aaa; font-size:0.82rem; margin:0; font-family:sans-serif; text-align:center;">
+            <span style="color:#00E6FF; font-weight:bold;">● 전자 (Electron)</span>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <span style="color:#FF7043; font-weight:bold;">● 정공 (Hole)</span>
         </p>
+
+        <!-- 동작 설명 (캔버스 밖, 별도 박스) -->
+        <div style="
+            width:530px;
+            background:#1e1e1e;
+            border-radius:8px;
+            padding:10px 16px;
+            border-left:4px solid {desc_color};
+            font-family:sans-serif;
+            font-size:0.83rem;
+            color:{desc_color};
+            line-height:1.5;
+        ">
+            {desc_text}
+        </div>
+
     </div>
+
     <script>
     (function() {{
         const canvas = document.getElementById('bjtCanvas');
         const ctx    = canvas.getContext('2d');
-        const MODE    = '{anim_key}';
+        const MODE     = '{anim_key}';
         const BJT_TYPE = '{bjt_type}';
 
-        const N_e = 40;
-        const N_h = 40;
+        const N_e = 40, N_h = 40;
         let particles = [];
 
-        // 화면 전체에 입자를 균등하게 뿌리고 시작 (병목/밀집 현상 원천 차단)
-        for(let i=0; i<N_e; i++){{
+        for (let i = 0; i < N_e; i++) {{
             particles.push({{
                 x: Math.random() * canvas.width,
                 y: 45 + Math.random() * 70,
-                r: 3.5,
-                type: 'electron',
-                dir: Math.random() < 0.5 ? 1 : -1 // 포화 상태의 양방향 흐름을 위해 미리 방향 속성 부여
+                r: 3.5, type: 'electron',
+                dir: Math.random() < 0.5 ? 1 : -1
             }});
         }}
-        for(let i=0; i<N_h; i++){{
+        for (let i = 0; i < N_h; i++) {{
             particles.push({{
                 x: Math.random() * canvas.width,
                 y: 45 + Math.random() * 70,
-                r: 3.5,
-                type: 'hole',
+                r: 3.5, type: 'hole',
                 dir: Math.random() < 0.5 ? 1 : -1
             }});
         }}
 
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 물리 접합면
+
+            // 접합면 점선
             [160, 360].forEach(x => {{
                 ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
                 ctx.setLineDash([4, 4]);
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
                 ctx.setLineDash([]);
             }});
-            
+
+            // 영역 라벨
             ctx.fillStyle = '#bbb'; ctx.font = '13px monospace';
-            const labels = {{'NPN': ['Emitter (N+)', 'Base (P)',  'Collector (N)'],
-                             'PNP': ['Emitter (P+)', 'Base (N)', 'Collector (P)']}}[BJT_TYPE];
+            const labels = {{
+                'NPN': ['Emitter (N+)', 'Base (P)',  'Collector (N)'],
+                'PNP': ['Emitter (P+)', 'Base (N)', 'Collector (P)']
+            }}[BJT_TYPE];
             ctx.fillText(labels[0],  20, 25);
             ctx.fillText(labels[1], 195, 25);
             ctx.fillText(labels[2], 380, 25);
-            
-            if (MODE === 'forward_active') {{
-                ctx.fillStyle = '#f39c12'; ctx.font = '12px sans-serif';
-                ctx.fillText('순방향 활성: 다수 캐리어의 연속적인 흐름 및 소수 캐리어 확산', 110, canvas.height - 10);
-            }} else if (MODE === 'reverse_active') {{
-                ctx.fillStyle = '#BB86FC'; ctx.font = '12px sans-serif';
-                ctx.fillText('역방향 활성: 흐름의 역전 (Collector → Emitter 방향 표류)', 110, canvas.height - 10);
-            }} else if (MODE === 'saturation') {{
-                ctx.fillStyle = '#28a745'; ctx.font = '12px sans-serif';
-                ctx.fillText('포화: 양쪽 장벽 소실로 캐리어가 양방향으로 막힘없이 범람(Flooding)함', 85, canvas.height - 10);
-            }} else if (MODE === 'cutoff') {{
-                ctx.fillStyle = '#E74C3C'; ctx.font = '12px sans-serif';
-                ctx.fillText('차단: 거대한 장벽에 막혀 이동 불가 (단순 열진동 상태)', 115, canvas.height - 10);
-            }}
-            
+
+            // 입자 그리기 및 이동
             particles.forEach(p => {{
-                ctx.fillStyle = p.type === 'electron' ? '#00E6FF' : '#FF7043';
-                ctx.shadowBlur = 4; ctx.shadowColor = ctx.fillStyle;
+                ctx.fillStyle   = p.type === 'electron' ? '#00E6FF' : '#FF7043';
+                ctx.shadowBlur  = 4;
+                ctx.shadowColor = ctx.fillStyle;
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-                ctx.shadowBlur = 0;
-                
-                let vx = 0;
-                let scatterX = 0.2;
-                
-                // 모드별 "뚫고 지나가는(Wrap-around)" 무한 스크롤 로직
+                ctx.shadowBlur  = 0;
+
+                let vx = 0, scatterX = 0.2;
+
                 if (MODE === 'forward_active') {{
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ vx = 3.5; if(p.x > canvas.width) p.x = 0; }}
-                        else {{ vx = -1.5; if(p.x < 0) p.x = 360; }} // 정공은 B->E 확산
+                        if (p.type === 'electron') {{ vx = 3.5;  if (p.x > canvas.width) p.x = 0; }}
+                        else                       {{ vx = -1.5; if (p.x < 0) p.x = 360; }}
                     }} else {{
-                        if (p.type === 'hole') {{ vx = 3.5; if(p.x > canvas.width) p.x = 0; }}
-                        else {{ vx = -1.5; if(p.x < 0) p.x = 360; }}
+                        if (p.type === 'hole')     {{ vx = 3.5;  if (p.x > canvas.width) p.x = 0; }}
+                        else                       {{ vx = -1.5; if (p.x < 0) p.x = 360; }}
                     }}
                 }} else if (MODE === 'saturation') {{
-                    // 포화 상태의 핵심: 양쪽에서 쏟아지고 서로 스쳐 지나가며 전체를 채움
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ 
-                            vx = p.dir * 3.0; // 절반은 왼쪽으로, 절반은 오른쪽으로 맹렬히 돌진
-                            if(vx > 0 && p.x > canvas.width) p.x = 0;
-                            if(vx < 0 && p.x < 0) p.x = canvas.width;
-                        }} else {{
-                            vx = p.dir * 1.5; // 정공도 베이스에서 뿜어져 나와 양쪽으로 퍼짐
-                            if(vx > 0 && p.x > canvas.width) p.x = 260; // 나간 정공은 베이스 중심에서 리스폰
-                            if(vx < 0 && p.x < 0) p.x = 260;
-                        }}
-                    }} else {{
-                        if (p.type === 'hole') {{ 
+                        if (p.type === 'electron') {{
                             vx = p.dir * 3.0;
-                            if(vx > 0 && p.x > canvas.width) p.x = 0;
-                            if(vx < 0 && p.x < 0) p.x = canvas.width;
+                            if (vx > 0 && p.x > canvas.width) p.x = 0;
+                            if (vx < 0 && p.x < 0) p.x = canvas.width;
                         }} else {{
                             vx = p.dir * 1.5;
-                            if(vx > 0 && p.x > canvas.width) p.x = 260;
-                            if(vx < 0 && p.x < 0) p.x = 260;
+                            if (vx > 0 && p.x > canvas.width) p.x = 260;
+                            if (vx < 0 && p.x < 0) p.x = 260;
+                        }}
+                    }} else {{
+                        if (p.type === 'hole') {{
+                            vx = p.dir * 3.0;
+                            if (vx > 0 && p.x > canvas.width) p.x = 0;
+                            if (vx < 0 && p.x < 0) p.x = canvas.width;
+                        }} else {{
+                            vx = p.dir * 1.5;
+                            if (vx > 0 && p.x > canvas.width) p.x = 260;
+                            if (vx < 0 && p.x < 0) p.x = 260;
                         }}
                     }}
                 }} else if (MODE === 'reverse_active') {{
                     if (BJT_TYPE === 'NPN') {{
-                        if (p.type === 'electron') {{ vx = -3.5; if(p.x < 0) p.x = canvas.width; }}
-                        else {{ vx = 1.5; if(p.x > canvas.width) p.x = 160; }} // 정공은 B->C
+                        if (p.type === 'electron') {{ vx = -3.5; if (p.x < 0) p.x = canvas.width; }}
+                        else                       {{ vx = 1.5;  if (p.x > canvas.width) p.x = 160; }}
                     }} else {{
-                        if (p.type === 'hole') {{ vx = -3.5; if(p.x < 0) p.x = canvas.width; }}
-                        else {{ vx = 1.5; if(p.x > canvas.width) p.x = 160; }}
+                        if (p.type === 'hole')     {{ vx = -3.5; if (p.x < 0) p.x = canvas.width; }}
+                        else                       {{ vx = 1.5;  if (p.x > canvas.width) p.x = 160; }}
                     }}
-                }} else if (MODE === 'cutoff') {{
-                    vx = 0;
-                    scatterX = 0.5; // 제자리 진동만
+                }} else {{  // cutoff
+                    vx = 0; scatterX = 0.5;
                 }}
-                
-                // 적용 및 Y축 이탈 방지
+
                 p.x += vx + (Math.random() - 0.5) * scatterX;
                 p.y += (Math.random() - 0.5) * 0.5;
-                
-                if (p.y < 35) p.y = 135;
+                if (p.y < 35)  p.y = 135;
                 if (p.y > 135) p.y = 35;
             }});
-            
+
             requestAnimationFrame(draw);
         }}
         draw();
@@ -528,4 +614,4 @@ with tab3:
     </script>
     """
 
-    components.html(canvas_html, height=230)
+    components.html(canvas_html, height=430)
