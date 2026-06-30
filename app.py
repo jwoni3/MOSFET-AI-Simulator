@@ -553,7 +553,7 @@ with col2:
     )
     st.plotly_chart(fig_iv, use_container_width=True)
 
-    # ── 에너지 밴드 다이어그램 (디자인 전면 개편 - 레퍼런스 스타일 적용) ──
+    # ── 에너지 밴드 다이어그램 (디자인 전면 개편 - 레퍼런스 스타일 적용, 파스텔 배경 제거) ──
     fig_band = go.Figure()
     E_g = 1.12
     x_all = np.linspace(0, 8.0, 500)
@@ -661,8 +661,9 @@ with col2:
         add_particles(x_je+0.4, x_jc-0.4, E_C_Base, True, 6)
         add_particles(x_jc+0.4, 7.8, E_V_Collector, False, 10)
 
+    # 제목 크기를 12로 원복, bold 태그 제거
     fig_band.update_layout(
-        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=14, color="#64748b"), x=0.5, y=0.95, xanchor="center"),
+        title=dict(text=f"Energy Band Diagram ({bjt_type})", font=dict(size=12, color="#64748b"), x=0.5, y=0.95, xanchor="center"),
         xaxis=dict(visible=False, range=[-0.1, 8.1]),
         yaxis=dict(
             title="Energy (eV)", title_font=dict(size=12, color="#64748b"),
