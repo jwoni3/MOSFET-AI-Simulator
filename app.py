@@ -129,7 +129,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<span style='font-size:0.8rem;font-weight:700;color:#1e293b;'>🤖 ASK AI</span>", unsafe_allow_html=True)
     user_question = st.text_area("질문 입력", height=60, label_visibility="collapsed",
-                                 value="현재 바이어스 상태가 증폭기로서 왜 적합한지 밴드 다이어그램 관점에서 설명해줘.",
+                                 value="e.g. 현재 바이어스 상태가 증폭기로서 왜 적합한지 밴드 다이어그램 관점에서 설명해줘.",
                                  placeholder="e.g. 현재 전압 조건 상태에 대해 물리적으로 쉽게 설명해줘.")
     ai_btn = st.button("🤖 AI 실시간 해설 보기", use_container_width=True, type="primary")
     
@@ -205,7 +205,7 @@ def get_battery_svg(cx, cy, voltage, is_left_loop, color):
         
     return "".join(lines)
 
-# ── BJT 구조 SVG (반응형 Width 적용)
+# ── BJT 구조 SVG
 def make_bjt_svg(bjt_type, V_be, V_bc):
     is_npn = bjt_type == "NPN"
     
@@ -264,7 +264,7 @@ def make_bjt_svg(bjt_type, V_be, V_bc):
 bjt_svg = make_bjt_svg(bjt_type, V_be, V_bc)
 
 # ════════════════════════════════════════════════
-# 레이아웃: 메인 타이틀 & 3단 컬럼 배치 (스크린샷 매칭)
+# 레이아웃: 메인 타이틀 & 3단 컬럼 배치
 # ════════════════════════════════════════════════
 
 st.markdown(f"""
@@ -273,7 +273,6 @@ st.markdown(f"""
 </h1>
 """, unsafe_allow_html=True)
 
-# 3단 컬럼 비율: 30% (상태+구조), 46% (그래프), 24% (AI)
 col1, col2, col3 = st.columns([0.28, 0.46, 0.26], gap="medium")
 
 # ── 1열: 소자 상태 & 구조
@@ -423,7 +422,7 @@ with col1:
     """
     components.html(canvas_html, height=400)
 
-# ── 2열: 그래프 모음 (I-V & 밴드)
+# ── 2열: 그래프 모음 (I-V & 디테일 밴드 다이어그램)
 with col2:
     st.markdown("<div class='section-header'>📈 특성 곡선 & 밴드 다이어그램</div>", unsafe_allow_html=True)
     
@@ -471,12 +470,11 @@ with col2:
     )
     st.plotly_chart(fig_iv, use_container_width=True)
 
-    # ── 에너지 밴드 다이어그램 (물리적 오류 완전 수정)
+    # ── 에너지 밴드 다이어그램 (디테일 & 심미성 강화)
     fig_band = go.Figure()
     E_g = 1.12
-    x_all = np.linspace(0, 8.0, 400)
-    ec_all = np.zeros_like(x_all)
-
+    x_all = np.linspace(0, 8.0, 500)
+    
     v_be_eff = float(np.clip(V_be, -5.0, 0.75))
     v_bc_eff = float(np.clip(V_bc, -5.0, 0.75))
 
@@ -493,57 +491,98 @@ with col2:
         E_C_Emitter = E_V_Emitter + E_g
         E_C_Collector = E_V_Collector + E_g
 
-    for i, x in enumerate(x_all):
-        if   x <= 2.4: ec_all[i] = E_C_Emitter
-        elif x >= 5.6: ec_all[i] = E_C_Collector
-        elif 3.2 <= x <= 4.8: ec_all[i] = E_C_Base
-        elif 2.4 < x < 3.2:
-            t = (x-2.4)/0.8*np.pi
-            ec_all[i] = E_C_Emitter + (E_C_Base-E_C_Emitter)*(1-np.cos(t))/2
-        elif 4.8 < x < 5.6:
-            t = (x-4.8)/0.8*np.pi
-            ec_all[i] = E_C_Base + (E_C_Collector-E_C_Base)*(1-np.cos(t))/2
+    # 접합부 중심 및 공핍층 폭 (전압에 따른 시각적 폭 변화 적용)
+    x_je = 2.8
+    x_jc = 5.2
+    w_be = max(0.4, 0.8 - 0.2 * v_be_eff)
+    w_bc = max(0.4, 0.8 - 0.2 * v_bc_eff)
+
+    # Tanh를 이용한 부드러운 에너지 밴드 곡선 생성
+    def calc_band(ec_e, ec_b, ec_c, x):
+        val = ec_b + (ec_e - ec_b) * 0.5 * (1 - np.tanh(3.5 * (x - x_je) / w_be)) \
+                   + (ec_c - ec_b) * 0.5 * (1 + np.tanh(3.5 * (x - x_jc) / w_bc))
+        return val
+
+    ec_all = calc_band(E_C_Emitter, E_C_Base, E_C_Collector, x_all)
     ev_all = ec_all - E_g
 
-    c_bg_e = "rgba(224,242,254,0.8)" if bjt_type=="NPN" else "rgba(255,228,230,0.8)"
-    c_bg_b = "rgba(255,228,230,0.8)" if bjt_type=="NPN" else "rgba(224,242,254,0.8)"
-    c_bg_c = "rgba(220,252,231,0.8)" if bjt_type=="NPN" else "rgba(252,231,243,0.8)"
+    # 영역별 배경색 (지정해주신 색상 코드 유지)
+    c_bg_e = "rgba(224,242,254,0.6)" if bjt_type=="NPN" else "rgba(255,228,230,0.6)"
+    c_bg_b = "rgba(255,228,230,0.6)" if bjt_type=="NPN" else "rgba(224,242,254,0.6)"
+    c_bg_c = "rgba(220,252,231,0.6)" if bjt_type=="NPN" else "rgba(252,231,243,0.6)"
 
-    fig_band.add_vrect(x0=0,   x1=2.8, fillcolor=c_bg_e, line_width=0, layer="below")
-    fig_band.add_vrect(x0=2.8, x1=5.2, fillcolor=c_bg_b, line_width=0, layer="below")
-    fig_band.add_vrect(x0=5.2, x1=8.0, fillcolor=c_bg_c, line_width=0, layer="below")
-    
-    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_c'))
-    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#0f172a',width=3), name='E_v'))
-    
-    fig_band.add_trace(go.Scatter(x=[0,2.4],   y=[E_F_Emitter,E_F_Emitter],   mode='lines', line=dict(color='#3b82f6',width=2,dash='dash'), name='E_F(E)'))
-    fig_band.add_trace(go.Scatter(x=[3.2,4.8], y=[E_F_Base,E_F_Base],         mode='lines', line=dict(color='#3b82f6',width=2,dash='dash'), name='E_F(B)'))
-    fig_band.add_trace(go.Scatter(x=[5.6,8.0], y=[E_F_Collector,E_F_Collector],mode='lines', line=dict(color='#3b82f6',width=2,dash='dash'), name='E_F(C)'))
-    
-    fig_band.add_annotation(x=8.15, y=ec_all[-1], text="<b>E_c</b>", showarrow=False, font=dict(size=12,color='#0f172a'))
-    fig_band.add_annotation(x=8.15, y=ev_all[-1], text="<b>E_v</b>", showarrow=False, font=dict(size=12,color='#0f172a'))
+    fig_band.add_vrect(x0=0,   x1=x_je, fillcolor=c_bg_e, line_width=0, layer="below")
+    fig_band.add_vrect(x0=x_je, x1=x_jc, fillcolor=c_bg_b, line_width=0, layer="below")
+    fig_band.add_vrect(x0=x_jc, x1=8.0, fillcolor=c_bg_c, line_width=0, layer="below")
 
+    # 가전자대(Valence Band) 텍스처/음영 채우기
+    fig_band.add_trace(go.Scatter(
+        x=np.concatenate([x_all, x_all[::-1]]),
+        y=np.concatenate([ev_all, np.full_like(x_all, min(ev_all)-0.5)]),
+        fill='toself', fillcolor='rgba(148, 163, 184, 0.15)', line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo='skip', showlegend=False
+    ))
+
+    # 전도대(Conduction Band) 음영 (약하게)
+    fig_band.add_trace(go.Scatter(
+        x=np.concatenate([x_all, x_all[::-1]]),
+        y=np.concatenate([ec_all, np.full_like(x_all, max(ec_all)+0.5)]),
+        fill='toself', fillcolor='rgba(148, 163, 184, 0.05)', line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo='skip', showlegend=False
+    ))
+
+    # E_c, E_v 선 그리기 (그림자 효과를 위해 굵은 투명 선 추가 후 얇은 선 배치)
+    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='rgba(15,23,42,0.2)',width=5), hoverinfo='skip', showlegend=False))
+    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='rgba(15,23,42,0.2)',width=5), hoverinfo='skip', showlegend=False))
+    
+    fig_band.add_trace(go.Scatter(x=x_all, y=ec_all, mode='lines', line=dict(color='#1e293b',width=2.5), name='E_c'))
+    fig_band.add_trace(go.Scatter(x=x_all, y=ev_all, mode='lines', line=dict(color='#1e293b',width=2.5), name='E_v'))
+
+    # 페르미 레벨 (각 영역별로 분리하여 자연스럽게)
+    fig_band.add_trace(go.Scatter(x=[0, x_je], y=[E_F_Emitter, E_F_Emitter], mode='lines', line=dict(color='#2563eb',width=2,dash='dash'), name='E_F(E)'))
+    fig_band.add_trace(go.Scatter(x=[x_je, x_jc], y=[E_F_Base, E_F_Base], mode='lines', line=dict(color='#2563eb',width=2,dash='dash'), name='E_F(B)'))
+    fig_band.add_trace(go.Scatter(x=[x_jc, 8.0], y=[E_F_Collector, E_F_Collector], mode='lines', line=dict(color='#2563eb',width=2,dash='dash'), name='E_F(C)'))
+
+    fig_band.add_annotation(x=7.8, y=ec_all[-1]+0.15, text="<b>E<sub>c</sub></b>", showarrow=False, font=dict(size=14,color='#1e293b'))
+    fig_band.add_annotation(x=7.8, y=ev_all[-1]-0.15, text="<b>E<sub>v</sub></b>", showarrow=False, font=dict(size=14,color='#1e293b'))
+
+    # 캐리어 파티클 시각화 (밴드 엣지 근처에 정교하게 배치)
     np.random.seed(42)
-    c_elec = '#06b6d4' 
-    c_hole = '#f97316' 
+    c_elec = '#06b6d4'; c_hole = '#ea580c'
     
-    if bjt_type == "NPN":
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(0.2,2.2,16), y=E_C_Emitter+np.random.uniform(0.02,0.15,16), mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), showlegend=False))
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(3.4,4.6,10), y=E_V_Base-np.random.uniform(0.02,0.15,10), mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), showlegend=False))
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(5.8,7.8,12), y=E_C_Collector+np.random.uniform(0.02,0.15,12), mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), showlegend=False))
-    else:
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(0.2,2.2,16), y=E_V_Emitter-np.random.uniform(0.02,0.15,16), mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), showlegend=False))
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(3.4,4.6,10), y=E_C_Base+np.random.uniform(0.02,0.15,10), mode='markers', marker=dict(color=c_elec,size=9,line=dict(color='#0891b2',width=1.5)), showlegend=False))
-        fig_band.add_trace(go.Scatter(x=np.random.uniform(5.8,7.8,12), y=E_V_Collector-np.random.uniform(0.02,0.15,12), mode='markers', marker=dict(color=c_hole,size=10,line=dict(color='#ea580c',width=1.5)), showlegend=False))
+    def add_particles(x_min, x_max, band_y, is_electron, count):
+        x_pts = np.random.uniform(x_min, x_max, count)
+        if is_electron:
+            y_pts = band_y + np.random.uniform(0.04, 0.18, count)
+            color, outline = c_elec, '#0891b2'
+        else:
+            y_pts = band_y - np.random.uniform(0.04, 0.18, count)
+            color, outline = c_hole, '#c2410c'
+            
+        fig_band.add_trace(go.Scatter(
+            x=x_pts, y=y_pts, mode='markers',
+            marker=dict(color=color, size=8, line=dict(color=outline, width=1.5), opacity=0.9),
+            showlegend=False, hoverinfo='skip'
+        ))
 
-    fig_band.add_vline(x=2.8, line=dict(color='#94a3b8',width=1.5,dash='dot'))
-    fig_band.add_vline(x=5.2, line=dict(color='#94a3b8',width=1.5,dash='dot'))
-    
+    if bjt_type == "NPN":
+        add_particles(0.2, x_je-0.4, E_C_Emitter, True, 15)
+        add_particles(x_je+0.4, x_jc-0.4, E_V_Base, False, 8)
+        add_particles(x_jc+0.4, 7.8, E_C_Collector, True, 12)
+    else:
+        add_particles(0.2, x_je-0.4, E_V_Emitter, False, 15)
+        add_particles(x_je+0.4, x_jc-0.4, E_C_Base, True, 8)
+        add_particles(x_jc+0.4, 7.8, E_V_Collector, False, 12)
+
+    # 접합 경계선 스무딩 처리 (점선)
+    fig_band.add_vline(x=x_je, line=dict(color='#cbd5e1',width=1.5,dash='dot'))
+    fig_band.add_vline(x=x_jc, line=dict(color='#cbd5e1',width=1.5,dash='dot'))
+
     fig_band.update_layout(
-        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=13, color="black"), x=0.5, xanchor="center"),
-        xaxis=dict(visible=False, range=[-0.2,8.6]),
-        yaxis=dict(visible=False, range=[min(ev_all)-0.35, max(ec_all)+0.8]),
-        height=320, margin=dict(l=10,r=10,t=50,b=10), showlegend=False, plot_bgcolor='white'
+        title=dict(text=f"<b>Energy Band Diagram ({bjt_type})</b>", font=dict(size=14, color="#0f172a"), x=0.5, xanchor="center"),
+        xaxis=dict(visible=False, range=[-0.1, 8.1]),
+        yaxis=dict(visible=False, range=[min(ev_all)-0.4, max(ec_all)+0.4]),
+        height=320, margin=dict(l=10,r=10,t=40,b=10), showlegend=False, plot_bgcolor='white'
     )
     st.plotly_chart(fig_band, use_container_width=True)
 
@@ -577,5 +616,4 @@ with col3:
         else:
             st.error("GEMINI_API_KEY가 설정되지 않았습니다.")
     else:
-        # [수정 완료] MOSFET 코드에서 사용하신 원본 st.info() 함수 그대로 적용!
         st.info("👉 왼쪽 패널에서 설정을 마치고 [AI 실시간 해설 보기] 버튼을 눌러보세요.")
